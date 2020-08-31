@@ -16,6 +16,20 @@ public:
     virtual void Draw() = 0;
 };
 
+//------------------------------------------------------------------------------
+class TileMaterial : public Material
+{
+public:
+    RESULT Init() override;
+    void Draw() override;
+
+private:
+    Shader*         tileVert_{};
+    Shader*         tileFrag_{};
+    Texture*        tileTex_{};
+    VertexBuffer*   tilesBuffer_{};
+    uint            tileVertexLayout_{};
+};
 
 //------------------------------------------------------------------------------
 class TexturedTriangleMaterial : public Material

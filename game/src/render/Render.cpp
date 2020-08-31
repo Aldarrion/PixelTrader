@@ -171,6 +171,12 @@ RESULT CreateRender(uint width, uint height)
 }
 
 //------------------------------------------------------------------------------
+void DestroyRender()
+{
+    delete g_Render;
+}
+
+//------------------------------------------------------------------------------
 constexpr const char* IGNORED_MSGS[] = {
     "UNASSIGNED-BestPractices-vkCreateDevice-deprecated-extension",
 };
@@ -279,22 +285,6 @@ void Render::TransitionBarrier(
         0, nullptr,
         1, &barrier
     );
-}
-
-//------------------------------------------------------------------------------
-void Render::LoadCamera()
-{
-    PropertyContainer cameraData;
-    RESULT r = serializationManager_->LoadConfig(CAMERA_CFG, cameraData);
-    if (r == R_OK)
-    {
-        camera_.Init(cameraData);
-        Log(LogLevel::Info, "Camera transform loaded");
-    }
-    else
-    {
-        Log(LogLevel::Error, "Failed to load camera transform");
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -888,6 +878,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     //materials_.Add(new TexturedTriangleMaterial());
     //materials_.Add(new ShapeMaterial());
     //materials_.Add(new PhongMaterial());
+    materials_.Add(new TileMaterial());
     
     for (int i = 0; i < materials_.Count(); ++i)
     {
@@ -902,8 +893,6 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     serializationManager_ = new SerializationManager();
     if (FAILED(serializationManager_->Init()))
         return R_FAIL;
-
-    LoadCamera();
 
     drawCanvas_ = new DrawCanvas();
     if (FAILED(drawCanvas_->Init()))
@@ -1017,6 +1006,15 @@ RESULT Render::PrepareForDraw()
     }
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+    //colorBlendAttachment.blendEnable = VK_TRUE;
+    //colorBlendAttachment.srcColorBlendFactor;
+    //VkBlendFactor            dstColorBlendFactor;
+    //VkBlendOp                colorBlendOp;
+    //VkBlendFactor            srcAlphaBlendFactor;
+    //VkBlendFactor            dstAlphaBlendFactor;
+    //VkBlendOp                alphaBlendOp;
+    //VkColorComponentFlags    colorWriteMask;
+
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     {
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -1168,29 +1166,6 @@ void Render::Draw(uint vertexCount, uint firstVertex)
 //------------------------------------------------------------------------------
 void Render::Update(float dTime)
 {
-    dTime_ = dTime;
-
-    camera_.Update();
-
-    {
-        if (g_Input->IsKeyUp(VK_F6))
-        {
-            PropertyContainer cameraData;
-            cameraData.Def = serializationManager_->GetDef(CameraDef::NAME);
-            camera_.FillData(cameraData);
-            RESULT res = serializationManager_->SaveConfig(CAMERA_CFG, cameraData);
-            if (res == R_OK)
-                Log(LogLevel::Info, "Camera transform saved");
-            else
-                Log(LogLevel::Error, "Failed to save camera transform");
-        }
-
-        if (g_Input->IsKeyUp(VK_F9))
-        {
-            LoadCamera();
-        }
-    }
-
     //-------------------
     // Create render pass
     VkRenderPass renderPass{};
@@ -1415,12 +1390,6 @@ float Render::GetAspect() const
 }
 
 //------------------------------------------------------------------------------
-const Camera& Render::GetCamera() const
-{
-    return camera_;
-}
-
-//------------------------------------------------------------------------------
 void Render::SetTexture(uint slot, Texture* texture)
 {
     uint texIdx = texture->GetBindlessIndex();
@@ -1525,12 +1494,6 @@ uint Render::GetOrCreateVertexLayout(VkPipelineVertexInputStateCreateInfo info)
 
     vertexLayouts_.Add(info);
     return vertexLayouts_.Count() - 1;
-}
-
-//------------------------------------------------------------------------------
-float Render::GetDTime() const
-{
-    return dTime_;
 }
 
 }

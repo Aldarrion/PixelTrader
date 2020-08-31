@@ -40,6 +40,7 @@ extern class Render* g_Render;
 
 //------------------------------------------------------------------------------
 RESULT CreateRender(uint width, uint height);
+void DestroyRender();
 
 //------------------------------------------------------------------------------
 VkResult SetDiagName(VkDevice device, uint64 object, VkObjectType type, const char* name);
@@ -146,13 +147,9 @@ public:
     uint GetHeight() const;
     float GetAspect() const;
 
-    const Camera& GetCamera() const;
-
     //----------------------
     // Vertex layout manager
     uint GetOrCreateVertexLayout(VkPipelineVertexInputStateCreateInfo info);
-
-    float GetDTime() const;
 
 private:
     static constexpr auto VK_VERSION = VK_API_VERSION_1_1;
@@ -267,16 +264,6 @@ private:
     //----------------------
     // Serialization
     SerializationManager* serializationManager_;
-
-    //----------------------
-    // Camera
-    Camera camera_{};
-
-    //----------------------
-    // Time
-    float dTime_{};
-
-    void LoadCamera();
 };
 
 

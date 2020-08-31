@@ -1,5 +1,6 @@
-#include "render/Render.h"
 
+#include "game/Game.h"
+#include "render/Render.h"
 #include "input/Input.h"
 
 #include "common/Logging.h"
@@ -84,9 +85,11 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     int WIDTH = 1280;
     int HEIGHT = 720;
 
+    // Window
     if (FAILED(InitWindow(WIDTH, HEIGHT, instance)))
         return -1;
 
+    // Render
     if (FAILED(hs::CreateRender(WIDTH, HEIGHT)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to create render");
@@ -100,6 +103,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         return -1;
     }
 
+    // Input
     if (FAILED(hs::CreateInput()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to crete input");
@@ -110,6 +114,20 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     if (FAILED(hs::g_Input->InitWin32(g_hwnd)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init input");
+        return -1;
+    }
+
+    // Game
+    if (FAILED(hs::CreateGame()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to crete game");
+        return -1;
+    }
+    hs_assert(hs::g_Game);
+
+    if (FAILED(hs::g_Game->InitWin32()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to init game");
         return -1;
     }
 
@@ -183,12 +201,17 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             float dTime = elapsed.count() / (1000.0f * 1000 * 1000);
 
             hs::g_Input->Update();
-
+            hs::g_Game->Update(dTime);
             hs::g_Render->Update(dTime);
 
             hs::g_Input->EndFrame();
         }
     }
 
+    hs::DestroyGame();
+    hs::DestroyInput();
+    hs::DestroyRender();
+
     return 0;
 }
+

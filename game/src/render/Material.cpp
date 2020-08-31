@@ -15,6 +15,122 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
+struct TileVertex
+{
+    Vec4 position_;
+    Vec2 uv_;
+    uint color_;
+    uint pad_[1];
+};
+
+//------------------------------------------------------------------------------
+uint TileVertexLayout()
+{
+    static VkVertexInputAttributeDescription attributeDescriptions[3]{};
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    attributeDescriptions[0].offset = 0;
+
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[1].offset = 16;
+
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].format = VK_FORMAT_B8G8R8A8_UNORM;
+    attributeDescriptions[2].offset = 24;
+
+    static VkVertexInputBindingDescription bindingDescription{};
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(TileVertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = hs_arr_len(attributeDescriptions);
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
+
+    return g_Render->GetOrCreateVertexLayout(vertexInputInfo);
+}
+
+//------------------------------------------------------------------------------
+RESULT TileMaterial::Init()
+{
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load("textures/Ground1.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+    tileTex_ = new Texture(VK_FORMAT_R8G8B8A8_SRGB, VkExtent3D{ (uint)texWidth, (uint)texHeight, 1 }, Texture::Type::TEX_2D);
+    
+    auto texAllocRes = tileTex_->Allocate((void**)&pixels, "GrassTile");
+    stbi_image_free(pixels);
+
+    if (HS_FAILED(texAllocRes))
+        return R_FAIL;
+
+    //
+    tileVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Tile_vs.hlsl");
+    tileFrag_ = g_Render->GetShaderManager()->GetOrCreateShader("Tile_fs.hlsl");
+
+    if (!tileVert_ || !tileFrag_)
+        return R_FAIL;
+
+    //
+    tilesBuffer_ = new VertexBuffer(1024 * 1024);
+    if (FAILED(tilesBuffer_->Init()))
+        return R_FAIL;
+
+    tileVertexLayout_ = TileVertexLayout();
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+void TileMaterial::Draw()
+{
+    auto mapped = (TileVertex*)tilesBuffer_->Map();
+
+    mapped[0].position_ = Vec4{ -1, -1, 0, 1 };
+    mapped[0].uv_ = Vec2{ 0, 1 };
+    mapped[0].color_ = 0xffffffff;
+
+    mapped[1].position_ = Vec4{ 1, -1, 0, 1 };
+    mapped[1].uv_ = Vec2{ 1, 1 };
+    mapped[1].color_ = 0xffffffff;
+
+    mapped[2].position_ = Vec4{ 1, 1, 0, 1 };
+    mapped[2].uv_ = Vec2{ 1, 0 };
+    mapped[2].color_ = 0xffffffff;
+
+    mapped[3].position_ = Vec4{ -1, -1, 0, 1 };
+    mapped[3].uv_ = Vec2{ 0, 1 };
+    mapped[3].color_ = 0xffffffff;
+
+    mapped[4].position_ = Vec4{ 1, 1, 0, 1 };
+    mapped[4].uv_ = Vec2{ 1, 0 };
+    mapped[4].color_ = 0xffffffff;
+
+    mapped[5].position_ = Vec4{ -1, 1, 0, 1 };
+    mapped[5].uv_ = Vec2{ 0, 0 };
+    mapped[5].color_ = 0xffffffff;
+
+    tilesBuffer_->Unmap();
+
+    g_Render->SetVertexLayout(0, tileVertexLayout_);
+    g_Render->SetVertexBuffer(0, tilesBuffer_, 0);
+    
+    g_Render->SetTexture(0, tileTex_);
+
+    g_Render->SetShader<PS_VERT>(tileVert_);
+    g_Render->SetShader<PS_FRAG>(tileFrag_);
+
+    g_Render->Draw(6, 0);
+}
+
+//------------------------------------------------------------------------------
 RESULT TexturedTriangleMaterial::Init()
 {
     {
@@ -151,8 +267,8 @@ void PhongMaterial::Draw()
     DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
     auto ubo = (SceneData*)mapped;
 
-    ubo->Projection = g_Render->GetCamera().ToCamera() * g_Render->GetCamera().ToProjection();
-    ubo->ViewPos    = g_Render->GetCamera().Position().ToVec4();
+    //ubo->Projection = g_Render->GetCamera().ToCamera() * g_Render->GetCamera().ToProjection();
+    //ubo->ViewPos    = g_Render->GetCamera().Position().ToVec4();
     
     g_Render->GetUBOCache()->EndAlloc();
 
@@ -215,11 +331,11 @@ void SkyboxMaterial::Draw()
     DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
     auto ubo = (SceneData*)mapped;
 
-    Mat44 camMat = g_Render->GetCamera().ToCamera();
-    camMat.SetPosition(Vec3{});
+    //Mat44 camMat = g_Render->GetCamera().ToCamera();
+    //camMat.SetPosition(Vec3{});
 
-    Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
-    ubo->Projection = projMat;
+    //Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
+    //ubo->Projection = projMat;
 
     g_Render->GetUBOCache()->EndAlloc();
 

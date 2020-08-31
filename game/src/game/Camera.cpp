@@ -3,6 +3,7 @@
 #include "input/Input.h"
 #include "render/Render.h"
 #include "game/Serialization.h"
+#include "game/Game.h"
 
 namespace hs
 {
@@ -62,29 +63,29 @@ void Camera::Update()
     {
         if (g_Input->GetState('W'))
         {
-            pos_ += forward_ * speed_ * g_Render->GetDTime();
+            pos_ += forward_ * speed_ * g_Game->GetDTime();
         }
         else if (g_Input->GetState('S'))
         {
-            pos_ -= forward_ * speed_ * g_Render->GetDTime();
+            pos_ -= forward_ * speed_ * g_Game->GetDTime();
         }
     
         if (g_Input->GetState('D'))
         {
-            pos_ += right_ * speed_ * g_Render->GetDTime();
+            pos_ += right_ * speed_ * g_Game->GetDTime();
         }
         else if (g_Input->GetState('A'))
         {
-            pos_ -= right_ * speed_ * g_Render->GetDTime();
+            pos_ -= right_ * speed_ * g_Game->GetDTime();
         }
 
         if (g_Input->GetState('Q'))
         {
-            pos_ += Vec3::UP() * speed_ * g_Render->GetDTime();
+            pos_ += Vec3::UP() * speed_ * g_Game->GetDTime();
         }
         else if (g_Input->GetState('E'))
         {
-            pos_ -= Vec3::UP() * speed_ * g_Render->GetDTime();
+            pos_ -= Vec3::UP() * speed_ * g_Game->GetDTime();
         }
     }
 
