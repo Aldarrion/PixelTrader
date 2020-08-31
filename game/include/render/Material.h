@@ -2,8 +2,8 @@
 
 #include "Config.h"
 
-#include "Enums.h"
-#include "Types.h"
+#include "common/Enums.h"
+#include "common/Types.h"
 
 namespace hs
 {

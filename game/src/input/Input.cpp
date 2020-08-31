@@ -1,9 +1,9 @@
-#include "Input.h   "
+#include "input/Input.h"
 
-#include "Logging.h"
-#include "Render.h"
+#include "common/Logging.h"
+#include "render/Render.h"
 
-#include "vkr_Windows.h"
+#include "platform/hs_Windows.h"
 
 namespace hs
 {
@@ -104,7 +104,7 @@ bool Input::GetState(int keyCode) const
 //------------------------------------------------------------------------------
 bool Input::IsButtonDown(MouseButton btn) const
 {
-    vkr_assert(btn < BTN_COUNT);
+    hs_assert(btn < BTN_COUNT);
 
     return buttons_[btn] == ButtonState::Down;
 }
@@ -112,7 +112,7 @@ bool Input::IsButtonDown(MouseButton btn) const
 //------------------------------------------------------------------------------
 bool Input::IsButtonUp(MouseButton btn) const
 {
-    vkr_assert(btn < BTN_COUNT);
+    hs_assert(btn < BTN_COUNT);
 
     return buttons_[btn] == ButtonState::Up;
 }
@@ -132,7 +132,7 @@ void Input::KeyUp(int key)
 //------------------------------------------------------------------------------
 void Input::ButtonDown(MouseButton button)
 {
-    vkr_assert(button < BTN_COUNT);
+    hs_assert(button < BTN_COUNT);
 
     buttons_[button] = ButtonState::Down;
 }
@@ -140,7 +140,7 @@ void Input::ButtonDown(MouseButton button)
 //------------------------------------------------------------------------------
 void Input::ButtonUp(MouseButton button)
 {
-    vkr_assert(button < BTN_COUNT);
+    hs_assert(button < BTN_COUNT);
 
     buttons_[button] = ButtonState::Up;
 }
@@ -170,13 +170,13 @@ void Input::SetMouseMode(MouseMode mode)
         {
             CenterCursor();
             int showCount = ShowCursor(false);
-            vkr_assert(showCount < 0);
+            hs_assert(showCount < 0);
         }
         else
         {
-            vkr_assert(mouseMode_ == MouseMode::Absolute);
+            hs_assert(mouseMode_ == MouseMode::Absolute);
             int showCount = ShowCursor(true);
-            vkr_assert(showCount >= 0);
+            hs_assert(showCount >= 0);
         }
     }
 }

@@ -1,9 +1,9 @@
-#include "Texture.h"
+#include "render/Texture.h"
 
-#include "Render.h"
-#include "Allocator.h"
-#include "Buffer.h"
-#include "Logging.h"
+#include "render/Render.h"
+#include "render/Allocator.h"
+#include "render/Buffer.h"
+#include "common/Logging.h"
 
 namespace hs
 {

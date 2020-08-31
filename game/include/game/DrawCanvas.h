@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Config.h"
-#include "Enums.h"
-#include "Types.h"
-#include "Array.h"
-#include "vkr_Math.h"
+#include "common/Enums.h"
+#include "common/Types.h"
+#include "containers/Array.h"
+#include "math/hs_Math.h"
 
 namespace hs
 {

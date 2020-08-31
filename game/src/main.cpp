@@ -92,7 +92,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         hs::Log(hs::LogLevel::Error, "Failed to create render");
         return -1;
     }
-    vkr_assert(hs::g_Render);
+    hs_assert(hs::g_Render);
 
     if (FAILED(hs::g_Render->InitWin32(g_hwnd, instance)))
     {
@@ -105,7 +105,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         hs::Log(hs::LogLevel::Error, "Failed to crete input");
         return -1;
     }
-    vkr_assert(hs::g_Input);
+    hs_assert(hs::g_Input);
 
     if (FAILED(hs::g_Input->InitWin32(g_hwnd)))
     {

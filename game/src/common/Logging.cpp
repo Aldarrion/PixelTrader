@@ -1,10 +1,11 @@
-#include "Logging.h"
+#include "common/Logging.h"
 
-#include "Types.h"
+#include "common/Types.h"
+#include "common/hs_Assert.h"
 
-#include "vkr_Math.h"
-#include "vkr_Assert.h"
-#include "vkr_Windows.h"
+#include "math/hs_Math.h"
+
+#include "platform/hs_Windows.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -40,7 +41,7 @@ void Log(LogLevel level, const char* formatString, ...)
 
     const size_t prefixSize = strlen(prefix);
     const int len = vsnprintf(buffer + prefixSize, buffSize - 1 - prefixSize, formatString, args);
-    vkr_assert(len >= 0 && "Logging failed, check the format string or exceeded length.");
+    hs_assert(len >= 0 && "Logging failed, check the format string or exceeded length.");
 
     buffer[prefixSize + len] = '\n';
     buffer[prefixSize + len + 1] = '\0';

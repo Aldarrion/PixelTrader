@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Render.h"
-#include "vkr_Math.h"
+#include "render/Render.h"
+#include "math/hs_Math.h"
 
 namespace hs
 {
@@ -37,7 +37,7 @@ inline uint ShapeVertexLayout()
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = vkr_arr_len(attributeDescriptions);
+    vertexInputInfo.vertexAttributeDescriptionCount = hs_arr_len(attributeDescriptions);
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
 
     return g_Render->GetOrCreateVertexLayout(vertexInputInfo);

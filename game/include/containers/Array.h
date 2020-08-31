@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Types.h"
-#include "vkr_Assert.h"
+#include "common/Types.h"
+#include "common/hs_Assert.h"
 
 namespace hs
 {
 
 //------------------------------------------------------------------------------
 template<class T>
-T vkr_max(T a, T b)
+T hs_max(T a, T b)
 {
     return a > b ? a : b;
 }
@@ -103,14 +103,14 @@ public:
     //------------------------------------------------------------------------------
     const T& operator[](size_t index) const
     {
-        vkr_assert(index < count_);
+        hs_assert(index < count_);
         return items_[index];
     }
 
     //------------------------------------------------------------------------------
     T& operator[](size_t index)
     {
-        vkr_assert(index < count_);
+        hs_assert(index < count_);
         return items_[index];
     }
 
@@ -120,7 +120,7 @@ public:
         if (count_ >= capacity_)
         {
             auto oldCapacity = capacity_;
-            capacity_ = vkr_max(capacity_ << 1, MIN_CAPACITY);
+            capacity_ = hs_max(capacity_ << 1, MIN_CAPACITY);
             
             T* newItems = (T*)malloc(sizeof(T) * capacity_);
             memcpy(newItems, items_, sizeof(T) * oldCapacity);
@@ -135,12 +135,12 @@ public:
     //------------------------------------------------------------------------------
     void Insert(size_t index, const T& item)
     {
-        vkr_assert(index <= count_);
+        hs_assert(index <= count_);
 
         if (count_ >= capacity_)
         {
             auto oldCapacity = capacity_;
-            capacity_ = vkr_max(capacity_ << 1, MIN_CAPACITY);
+            capacity_ = hs_max(capacity_ << 1, MIN_CAPACITY);
             
             T* newItems = (T*)malloc(sizeof(T) * capacity_);
             memcpy(newItems, items_, sizeof(T) * index);
@@ -162,7 +162,7 @@ public:
     //------------------------------------------------------------------------------
     void Remove(size_t index)
     {
-        vkr_assert(index < count_);
+        hs_assert(index < count_);
         items_[index].~T();
         
         --count_;
@@ -182,7 +182,7 @@ public:
     //------------------------------------------------------------------------------
     const T& Last()
     {
-        vkr_assert(count_);
+        hs_assert(count_);
         return items_[count_ - 1];
     }
 

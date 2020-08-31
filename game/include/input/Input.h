@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Config.h"
-#include "Types.h"
-#include "Enums.h"
-#include "Array.h"
+#include "common/Types.h"
+#include "common/Enums.h"
+#include "containers/Array.h"
 
-#include "vkr_Math.h"
+#include "math/hs_Math.h"
 
-#include "vkr_Windows.h"
+#include "platform/hs_Windows.h"
 
 namespace hs
 {

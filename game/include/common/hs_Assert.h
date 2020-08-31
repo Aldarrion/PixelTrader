@@ -3,4 +3,4 @@
 
 #include <cassert>
 
-#define vkr_assert(x) assert(x)
+#define hs_assert(x) assert(x)

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Config.h"
-#include "Enums.h"
+#include "common/Enums.h"
 
-#include "Array.h"
+#include "containers/Array.h"
 
-#include "VkTypes.h"
+#include "render/VkTypes.h"
 #include <unordered_map>
 
 struct shaderc_compiler;

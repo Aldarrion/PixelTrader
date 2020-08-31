@@ -1,12 +1,12 @@
-#include "DrawCanvas.h"
+#include "game/DrawCanvas.h"
 
-#include "Render.h"
-#include "ShaderManager.h"
-#include "VertexTypes.h"
-#include "VertexBuffer.h"
-#include "Input.h"
+#include "render/Render.h"
+#include "render/ShaderManager.h"
+#include "render/VertexTypes.h"
+#include "render/VertexBuffer.h"
+#include "input/Input.h"
 
-#include "Logging.h"
+#include "common/Logging.h"
 
 namespace hs
 {
@@ -65,7 +65,7 @@ void DrawCanvas::Draw()
     }
     else
     {
-        vkr_assert(drawMode_ == DrawMode::CatmullRom);
+        hs_assert(drawMode_ == DrawMode::CatmullRom);
 
         const uint tesselLevel = 5;
 

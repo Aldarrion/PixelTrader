@@ -1,7 +1,7 @@
-#include "VertexBuffer.h"
+#include "render/VertexBuffer.h"
 
-#include "Render.h"
-#include "Allocator.h"
+#include "render/Render.h"
+#include "render/Allocator.h"
 
 namespace hs
 {

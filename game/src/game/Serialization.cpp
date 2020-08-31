@@ -1,10 +1,10 @@
-#include "Serialization.h"
+#include "game/Serialization.h"
 
-#include "Logging.h"
+#include "common/Logging.h"
 
 #include "cjson/cJSON.h"
 
-#include "vkr_Windows.h"
+#include "platform/hs_Windows.h"
 
 namespace hs
 {
@@ -275,7 +275,7 @@ RESULT SerializationManager::Init()
 const DefBase* SerializationManager::GetDef(const char* name) const
 {
     auto def = defs_.find(name);
-    vkr_assert(def != defs_.end());
+    hs_assert(def != defs_.end());
     return def->second;
 }
 

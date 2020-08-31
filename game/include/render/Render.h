@@ -2,17 +2,17 @@
 
 #include "Config.h"
 
-#include "DynamicUniformBufferEntry.h"
+#include "render/DynamicUniformBufferEntry.h"
 
-#include "Hash.h"
-#include "Enums.h"
-#include "Types.h"
-#include "Array.h"
-#include "VkTypes.h"
-#include "Camera.h"
+#include "containers/Hash.h"
+#include "common/Enums.h"
+#include "common/Types.h"
+#include "containers/Array.h"
+#include "render/VkTypes.h"
+#include "game/Camera.h"
 
-#include "vkr_Math.h"
-#include "vkr_Windows.h"
+#include "math/hs_Math.h"
+#include "platform/hs_Windows.h"
 
 #include <unordered_map> // TODO use custom hashmap
 

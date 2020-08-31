@@ -1,8 +1,8 @@
-#include "DynamicUniformBuffer.h"
+#include "render/DynamicUniformBuffer.h"
 
-#include "Allocator.h"
-#include "Render.h"
-#include "vkr_Math.h"
+#include "render/Allocator.h"
+#include "render/Render.h"
+#include "math/hs_Math.h"
 
 namespace hs
 {
@@ -72,7 +72,7 @@ RESULT DynamicUBOCache::Init()
 DynamicUBOEntry DynamicUBOCache::BeginAlloc(uint size, void** data)
 {
     uint minUboAlignment = (uint)g_Render->GetPhysDevProps().limits.minUniformBufferOffsetAlignment;
-    vkr_assert(minUboAlignment > 0);
+    hs_assert(minUboAlignment > 0);
     size = Max(size, minUboAlignment);
 
     entries_[0].begin_ = Align(entries_[0].begin_, size);

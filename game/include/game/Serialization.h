@@ -2,10 +2,10 @@
 
 #include "Config.h"
 
-#include "Array.h"
-#include "Enums.h"
+#include "containers/Array.h"
+#include "common/Enums.h"
 
-#include "vkr_Math.h"
+#include "math/hs_Math.h"
 
 #include <cstdlib>
 
@@ -132,7 +132,7 @@ struct PropertyContainer
             }
         }
 
-        vkr_assert(!"Property at given index not found");
+        hs_assert(!"Property at given index not found");
         static auto empty = PropertyValue{};
         return empty;
     };
@@ -221,7 +221,7 @@ struct CameraDef : DefBase
             }
             default:
             {
-                vkr_assert(false);
+                hs_assert(false);
                 break;
             }
         }

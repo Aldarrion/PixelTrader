@@ -20,7 +20,7 @@ inline constexpr uint Max(uint a, uint b)
 //------------------------------------------------------------------------------
 inline constexpr uint Align(uint x, uint align)
 {
-    vkr_assert(align);
+    hs_assert(align);
     return ((x + align - 1) / align) * align;
 }
 

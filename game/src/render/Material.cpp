@@ -1,14 +1,14 @@
-#include "Material.h"
+#include "render/Material.h"
 
-#include "Render.h"
-#include "Texture.h"
-#include "ShaderManager.h"
-#include "VertexBuffer.h"
-#include "DynamicUniformBuffer.h"
-#include "VertexTypes.h"
-#include "Input.h"
+#include "render/Render.h"
+#include "render/Texture.h"
+#include "render/ShaderManager.h"
+#include "render/VertexBuffer.h"
+#include "render/DynamicUniformBuffer.h"
+#include "render/VertexTypes.h"
+#include "input/Input.h"
 
-#include "vkr_Image.h"
+#include "render/hs_Image.h"
 #include <string>
 
 namespace hs
@@ -183,7 +183,7 @@ RESULT SkyboxMaterial::Init()
         skyboxCubemap_ = new Texture(VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D{ (uint)texWidth, (uint)texHeight, 1 }, Texture::Type::TEX_CUBE);
 
         auto texAllocRes = skyboxCubemap_->Allocate((void**)pixels, "Skybox");
-        for (uint i = 0; i < vkr_arr_len(pixels); ++i)
+        for (uint i = 0; i < hs_arr_len(pixels); ++i)
             stbi_image_free(pixels[i]);
     
         if (FAILED(texAllocRes))

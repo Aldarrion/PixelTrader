@@ -1,8 +1,8 @@
-#include "Camera.h"
+#include "game/Camera.h"
 
-#include "Input.h"
-#include "Render.h"
-#include "Serialization.h"
+#include "input/Input.h"
+#include "render/Render.h"
+#include "game/Serialization.h"
 
 namespace hs
 {

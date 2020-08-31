@@ -1,21 +1,21 @@
-#include "Render.h"
+#include "render/Render.h"
 
-#include "Logging.h"
-#include "Allocator.h"
-#include "Shader.h"
-#include "Material.h"
-#include "Texture.h"
-#include "ShaderManager.h"
-#include "VertexBuffer.h"
-#include "DynamicUniformBuffer.h"
+#include "common/Logging.h"
+#include "render/Allocator.h"
+#include "render/Shader.h"
+#include "render/Material.h"
+#include "render/Texture.h"
+#include "render/ShaderManager.h"
+#include "render/VertexBuffer.h"
+#include "render/DynamicUniformBuffer.h"
 
-#include "DrawCanvas.h"
+#include "game/DrawCanvas.h"
 
-#include "Serialization.h"
-#include "Input.h"
+#include "game/Serialization.h"
+#include "input/Input.h"
 
-#include "vkr_Assert.h"
-#include "vkr_Vulkan.h"
+#include "common/hs_Assert.h"
+#include "render/hs_Vulkan.h"
 
 #include "vulkan/vulkan_win32.h"
 
@@ -78,7 +78,7 @@ const char* ResultToString(VkResult result)
         //case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS_KHR: return "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS_KHR";
         //case VK_RESULT_BEGIN_RANGE: return "VK_RESULT_BEGIN_RANGE";
         //case VK_RESULT_END_RANGE: return "VK_RESULT_END_RANGE";
-        case VK_RESULT_RANGE_SIZE: return "VK_RESULT_RANGE_SIZE";
+        //case VK_RESULT_RANGE_SIZE: return "VK_RESULT_RANGE_SIZE";
         default: return "UNKNOWN CODE";
     }
 }
@@ -88,8 +88,8 @@ bool CheckResult(VkResult result, const char* file, int line, const char* fun)
 {
     if (result != VK_SUCCESS)
     {
-        vkr::Log(vkr::LogLevel::Error, "Operation failed, %s(%d), %s, error: %d %s", file, line, fun, result, ResultToString(result));
-        vkr_assert(false);
+        hs::Log(hs::LogLevel::Error, "Operation failed, %s(%d), %s, error: %d %s", file, line, fun, result, ResultToString(result));
+        hs_assert(false);
         return false;
     }
     return true;
@@ -189,7 +189,7 @@ VkBool32 ValidationCallback(
     const char* msg,
     void* userData)
 {
-    for (uint i = 0; i < vkr_arr_len(IGNORED_MSGS); ++i)
+    for (uint i = 0; i < hs_arr_len(IGNORED_MSGS); ++i)
     {
         if (strstr(msg, IGNORED_MSGS[i]) != NULL)
             return VK_FALSE;
@@ -208,7 +208,7 @@ VkBool32 ValidationCallback(
 //------------------------------------------------------------------------------
 RESULT Render::ReloadShaders()
 {
-    vkr_assert(shaderManager_);
+    hs_assert(shaderManager_);
 
     for (auto pl : pipelineCache_)
         destroyPipelines_[currentBBIdx_].Add(pl.second);
@@ -331,7 +331,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
             "VK_LAYER_LUNARG_standard_validation",
         };
 
-        instInfo.enabledLayerCount      = (uint)vkr_arr_len(validationLayers);
+        instInfo.enabledLayerCount      = (uint)hs_arr_len(validationLayers);
         instInfo.ppEnabledLayerNames    = validationLayers;
     #endif
 
@@ -342,7 +342,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
     };
 
-    instInfo.enabledExtensionCount      = vkr_arr_len(instanceExt);
+    instInfo.enabledExtensionCount      = hs_arr_len(instanceExt);
     instInfo.ppEnabledExtensionNames    = instanceExt;
 
     if (VKR_FAILED(vkCreateInstance(&instInfo, nullptr, &vkInstance_)))
@@ -375,7 +375,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     if (VKR_FAILED(vkEnumeratePhysicalDevices(vkInstance_, &physicalDeviceCount, physicalDevices)))
         return R_FAIL;
 
-    vkr_assert(physicalDeviceCount > 0 && physicalDeviceCount < vkr_arr_len(physicalDevices));
+    hs_assert(physicalDeviceCount > 0 && physicalDeviceCount < hs_arr_len(physicalDevices));
 
     int bestDevice = 0;
     // TODO Actually find the best device and check capabilities here
@@ -415,7 +415,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         }
     }
 
-    vkr_assert(directQueueFamilyIdx_ != VKR_INVALID);
+    hs_assert(directQueueFamilyIdx_ != VKR_INVALID);
 
     VkDeviceQueueCreateInfo queues[1]{};
     float prioritites[1]{ 1.0f };
@@ -451,7 +451,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     deviceInfo.pQueueCreateInfos        = queues;
     deviceInfo.enabledLayerCount        = instInfo.enabledLayerCount;
     deviceInfo.ppEnabledLayerNames      = instInfo.ppEnabledLayerNames;
-    deviceInfo.enabledExtensionCount    = vkr_arr_len(deviceExt);
+    deviceInfo.enabledExtensionCount    = hs_arr_len(deviceExt);
     deviceInfo.ppEnabledExtensionNames  = deviceExt;
     deviceInfo.pEnabledFeatures         = &deviceFeatures;
         
@@ -580,7 +580,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     if (VKR_FAILED(vkGetSwapchainImagesKHR(vkDevice_, vkSwapchain_, &swapchainImageCount, nullptr)))
         return R_FAIL;
 
-    vkr_assert(swapchainImageCount < 10);
+    hs_assert(swapchainImageCount < 10);
     DBG_LOG("Swapchain image count: %d", swapchainImageCount);
 
     if (VKR_FAILED(vkGetSwapchainImagesKHR(vkDevice_, vkSwapchain_, &swapchainImageCount, bbImages_)))
@@ -732,7 +732,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     VkDescriptorSetLayoutCreateInfo dsLayoutInfo{};
     dsLayoutInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dsLayoutInfo.bindingCount   = vkr_arr_len(bindings);
+    dsLayoutInfo.bindingCount   = hs_arr_len(bindings);
     dsLayoutInfo.pBindings      = bindings;
 
     if (VKR_FAILED(vkCreateDescriptorSetLayout(vkDevice_, &dsLayoutInfo, nullptr, &fsSamplerLayout_)))
@@ -755,7 +755,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     bindlessSrv.sType           = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     bindlessSrv.pNext           = &bindingFlagsInfo;
     bindlessSrv.flags           = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
-    bindlessSrv.bindingCount    = vkr_arr_len(srvBindings);
+    bindlessSrv.bindingCount    = hs_arr_len(srvBindings);
     bindlessSrv.pBindings       = srvBindings;
     
     if (VKR_FAILED(vkCreateDescriptorSetLayout(vkDevice_, &bindlessSrv, nullptr, &bindlessTexturesLayout_)))
@@ -773,7 +773,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     VkDescriptorSetLayoutCreateInfo dynamicUbo{};
     dynamicUbo.sType           = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dynamicUbo.bindingCount    = vkr_arr_len(uboBindings);
+    dynamicUbo.bindingCount    = hs_arr_len(uboBindings);
     dynamicUbo.pBindings       = uboBindings;
 
     if (VKR_FAILED(vkCreateDescriptorSetLayout(vkDevice_, &dynamicUbo, nullptr, &dynamicUBOLayout_)))
@@ -786,7 +786,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     };
 
     VkPipelineLayoutCreateInfo plLayoutInfo{};
-    plLayoutInfo.setLayoutCount = vkr_arr_len(descLayouts);
+    plLayoutInfo.setLayoutCount = hs_arr_len(descLayouts);
     plLayoutInfo.pSetLayouts    = descLayouts;
 
     plLayoutInfo.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -804,7 +804,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         poolInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.flags          = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
         poolInfo.maxSets        = 1;
-        poolInfo.poolSizeCount  = vkr_arr_len(poolSizes);
+        poolInfo.poolSizeCount  = hs_arr_len(poolSizes);
         poolInfo.pPoolSizes     = poolSizes;
     
         if (VKR_FAILED(vkCreateDescriptorPool(vkDevice_, &poolInfo, nullptr, &bindlessPool_)))
@@ -829,7 +829,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         VkDescriptorPoolCreateInfo immutableSampler{};
         immutableSampler.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         immutableSampler.maxSets        = 1;
-        immutableSampler.poolSizeCount  = vkr_arr_len(immutableSamplerSizes);
+        immutableSampler.poolSizeCount  = hs_arr_len(immutableSamplerSizes);
         immutableSampler.pPoolSizes     = immutableSamplerSizes;
     
         if (VKR_FAILED(vkCreateDescriptorPool(vkDevice_, &immutableSampler, nullptr, &immutableSamplerPool_)))
@@ -854,7 +854,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         VkDescriptorPoolCreateInfo dynamicUbo{};
         dynamicUbo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         dynamicUbo.maxSets        = 1024;
-        dynamicUbo.poolSizeCount  = vkr_arr_len(dynUboSizes);
+        dynamicUbo.poolSizeCount  = hs_arr_len(dynUboSizes);
         dynamicUbo.pPoolSizes     = dynUboSizes;
 
         for (int i = 0; i < BB_IMG_COUNT; ++i)
@@ -1136,7 +1136,7 @@ RESULT Render::PrepareForDraw()
         state_.uboDescSet_,
     };
 
-    vkCmdBindDescriptorSets(CmdBuff(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, vkr_arr_len(descSets), descSets, vkr_arr_len(dynOffsets), dynOffsets);
+    vkCmdBindDescriptorSets(CmdBuff(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, hs_arr_len(descSets), descSets, hs_arr_len(dynOffsets), dynOffsets);
 
     // Vertex buffers
     if (state_.vertexBuffers_[0])
@@ -1241,7 +1241,7 @@ void Render::Update(float dTime)
         VkAttachmentDescription attachments[] = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = vkr_arr_len(attachments);
+        renderPassInfo.attachmentCount = hs_arr_len(attachments);
         renderPassInfo.pAttachments = attachments;
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
@@ -1264,7 +1264,7 @@ void Render::Update(float dTime)
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass      = renderPass;
-        framebufferInfo.attachmentCount = vkr_arr_len(viewAttachments);
+        framebufferInfo.attachmentCount = hs_arr_len(viewAttachments);
         framebufferInfo.pAttachments    = viewAttachments;
         framebufferInfo.width           = width_;
         framebufferInfo.height          = height_;
@@ -1286,7 +1286,7 @@ void Render::Update(float dTime)
     renderPassBeginInfo.renderPass      = renderPass;
     renderPassBeginInfo.framebuffer     = frameBuffer;
     renderPassBeginInfo.renderArea      = VkRect2D { VkOffset2D { 0, 0 }, VkExtent2D { width_, height_ } };
-    renderPassBeginInfo.clearValueCount = vkr_arr_len(clearVal);
+    renderPassBeginInfo.clearValueCount = hs_arr_len(clearVal);
     renderPassBeginInfo.pClearValues    = clearVal;
 
     vkCmdBeginRenderPass(directCmdBuffers_[currentBBIdx_], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -1435,7 +1435,7 @@ void Render::SetTexture(uint slot, Texture* texture)
 //------------------------------------------------------------------------------
 void Render::SetVertexBuffer(uint slot, VertexBuffer* buffer, uint offset)
 {
-    vkr_assert(slot < RenderState::MAX_VERT_BUFF);
+    hs_assert(slot < RenderState::MAX_VERT_BUFF);
 
     state_.vertexBuffers_[slot] = buffer->GetBuffer();
     state_.vbOffsets_[slot] = offset;
@@ -1456,7 +1456,7 @@ void Render::SetVertexLayout(uint slot, uint layoutHandle)
 //------------------------------------------------------------------------------
 void Render::SetDynamicUbo(uint slot, DynamicUBOEntry* entry)
 {
-    vkr_assert(slot < DYNAMIC_UBO_COUNT + 1);
+    hs_assert(slot < DYNAMIC_UBO_COUNT + 1);
 
     state_.dynamicUBOs_[slot - 1] = entry;
 }

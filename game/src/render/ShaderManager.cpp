@@ -1,10 +1,10 @@
-#include "ShaderManager.h"
+#include "render/ShaderManager.h"
 
-#include "Render.h"
-#include "Logging.h"
-#include "Shader.h"
+#include "render/Render.h"
+#include "common/Logging.h"
+#include "render/Shader.h"
 
-#include "vkr_Shaderc.h"
+#include "render/hs_Shaderc.h"
 
 #include <cstdio>
 
@@ -130,7 +130,7 @@ RESULT ShaderManager::CompileShader(const char* file, PipelineStage type, Shader
 //------------------------------------------------------------------------------
 RESULT ShaderManager::CreateShader(const char* name, Shader* shader)
 {
-    vkr_assert(shader);
+    hs_assert(shader);
 
     const uint nameLen = (uint)strlen(name);
     if (nameLen < 9)
