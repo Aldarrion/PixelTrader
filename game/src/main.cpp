@@ -50,7 +50,7 @@ static hs::RESULT InitWindow(int width, int height, HINSTANCE instance)
 
     g_hwnd = CreateWindowA(
         wCls.lpszClassName,
-        "VkRenderer",
+        "PixelTrader",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT, CW_USEDEFAULT,
         rc.right - rc.left, rc.bottom - rc.top,

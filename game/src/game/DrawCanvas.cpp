@@ -88,7 +88,7 @@ void DrawCanvas::Draw()
                     + (t3 - t2) * m1;
 
                 verts[i * tesselLevel + j].position_ = Vec4{ pos.x, pos.y, 0, 0 };
-                verts[i * tesselLevel + j].color_ = 0xff2222dd;
+                verts[i * tesselLevel + j].color_ = 0xffff22dd;
             }
         }
 

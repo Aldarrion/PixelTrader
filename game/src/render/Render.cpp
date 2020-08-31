@@ -196,7 +196,7 @@ VkBool32 ValidationCallback(
     }
 
     auto logLevel = LogLevel::Error;
-    if (strncmp(msg, VALIDATION_WARNING, strlen(VALIDATION_WARNING)))
+    if (strncmp(msg, VALIDATION_WARNING, strlen(VALIDATION_WARNING)) == 0)
         logLevel = LogLevel::Warning;
 
     Log(logLevel, "%s", msg);
@@ -632,7 +632,6 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         depthImageInfo.tiling           = VK_IMAGE_TILING_OPTIMAL;
         depthImageInfo.usage            = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         depthImageInfo.sharingMode      = VK_SHARING_MODE_EXCLUSIVE;
-        depthImageInfo.initialLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VmaAllocationCreateInfo depthAllocInfo{};
         depthAllocInfo.usage            = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -885,10 +884,10 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     //-----------------------
     // Material allocation
-    materials_.Add(new SkyboxMaterial());
+    //materials_.Add(new SkyboxMaterial());
     //materials_.Add(new TexturedTriangleMaterial());
     //materials_.Add(new ShapeMaterial());
-    materials_.Add(new PhongMaterial());
+    //materials_.Add(new PhongMaterial());
     
     for (int i = 0; i < materials_.Count(); ++i)
     {
@@ -1210,15 +1209,15 @@ void Render::Update(float dTime)
         colorAttachmentRef.attachment   = 0;
         colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        VkAttachmentDescription depthAttachment{};
-        depthAttachment.format          = VK_FORMAT_D16_UNORM;
-        depthAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        //VkAttachmentDescription depthAttachment{};
+        //depthAttachment.format          = VK_FORMAT_D24_UNORM_S8_UINT;
+        //depthAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
+        //depthAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        //depthAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        //depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        //depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        //depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+        //depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment   = 1;
@@ -1228,7 +1227,7 @@ void Render::Update(float dTime)
         subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount    = 1;
         subpass.pColorAttachments       = &colorAttachmentRef;
-        subpass.pDepthStencilAttachment = &depthAttachmentRef;
+        //subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
         /*VkSubpassDependency dependency{};
         dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
@@ -1238,7 +1237,7 @@ void Render::Update(float dTime)
         dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
 
-        VkAttachmentDescription attachments[] = { colorAttachment, depthAttachment };
+        VkAttachmentDescription attachments[] = { colorAttachment/*, depthAttachment*/ };
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.attachmentCount = hs_arr_len(attachments);
@@ -1259,7 +1258,7 @@ void Render::Update(float dTime)
     // Create framebuffer
     VkFramebuffer frameBuffer{};
     {
-        VkImageView viewAttachments[] = { bbViews_[currentBBIdx_], depthViews_[currentBBIdx_] };
+        VkImageView viewAttachments[] = { bbViews_[currentBBIdx_]/*, depthViews_[currentBBIdx_]*/ };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
