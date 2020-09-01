@@ -92,29 +92,30 @@ RESULT TileMaterial::Init()
 void TileMaterial::Draw()
 {
     {
+        constexpr float scale = 16;
         auto mapped = (TileVertex*)tilesBuffer_->Map();
 
-        mapped[0].position_ = Vec4{ -1, -1, 0, 1 };
+        mapped[0].position_ = Vec4{ -1 * scale, -1 * scale, 0, 1 };
         mapped[0].uv_ = Vec2{ 0, 1 };
         mapped[0].color_ = 0xffffffff;
 
-        mapped[1].position_ = Vec4{ 1, -1, 0, 1 };
+        mapped[1].position_ = Vec4{ 1 * scale, -1 * scale, 0, 1 };
         mapped[1].uv_ = Vec2{ 1, 1 };
         mapped[1].color_ = 0xffffffff;
 
-        mapped[2].position_ = Vec4{ 1, 1, 0, 1 };
+        mapped[2].position_ = Vec4{ 1 * scale, 1 * scale, 0, 1 };
         mapped[2].uv_ = Vec2{ 1, 0 };
         mapped[2].color_ = 0xffffffff;
 
-        mapped[3].position_ = Vec4{ -1, -1, 0, 1 };
+        mapped[3].position_ = Vec4{ -1 * scale, -1 * scale, 0, 1 };
         mapped[3].uv_ = Vec2{ 0, 1 };
         mapped[3].color_ = 0xffffffff;
 
-        mapped[4].position_ = Vec4{ 1, 1, 0, 1 };
+        mapped[4].position_ = Vec4{ 1 * scale, 1 * scale, 0, 1 };
         mapped[4].uv_ = Vec2{ 1, 0 };
         mapped[4].color_ = 0xffffffff;
 
-        mapped[5].position_ = Vec4{ -1, 1, 0, 1 };
+        mapped[5].position_ = Vec4{ -1 * scale, 1 * scale, 0, 1 };
         mapped[5].uv_ = Vec2{ 0, 0 };
         mapped[5].color_ = 0xffffffff;
 

@@ -8,6 +8,8 @@
 #include "render/Render.h"
 #include "render/hs_Image.h"
 
+#include "input/Input.h"
+
 namespace hs
 {
 
@@ -43,6 +45,34 @@ RESULT Game::InitWin32()
 void Game::Update(float dTime)
 {
     dTime_ = dTime;
+
+    // Move camera
+    {
+        Camera& cam = g_Render->GetCamera();
+        Vec3 pos = cam.Position();
+
+        float speed{ 20 };
+        if (g_Input->GetState('W'))
+        {
+            pos += Vec3::UP() * speed * GetDTime();
+        }
+        else if (g_Input->GetState('S'))
+        {
+            pos -= Vec3::UP() * speed * GetDTime();
+        }
+    
+        if (g_Input->GetState('D'))
+        {
+            pos += Vec3::RIGHT() * speed * GetDTime();
+        }
+        else if (g_Input->GetState('A'))
+        {
+            pos -= Vec3::RIGHT() * speed * GetDTime();
+        }
+
+        cam.SetPosition(pos);
+        cam.UpdateMatrics();
+    }
 }
 
 //------------------------------------------------------------------------------

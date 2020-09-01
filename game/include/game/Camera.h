@@ -23,6 +23,8 @@ public:
     const Mat44& ToProjection() const;
     const Vec3& Position() const;
 
+    void SetPosition(const Vec3& pos);
+
     void Init(const PropertyContainer& data);
     void FillData(PropertyContainer& data);
 
@@ -38,11 +40,10 @@ private:
     Vec3 right_{ Vec3::RIGHT() };
 
     Vec2 angles_{ 0, 90 };
-    float speed_{ 20 };
     float fovy_{ 75 };
     float near_{ 0.01f };
     float far_{ 1000 };
-    float extent_{ 4 };
+    float extent_{ 64 };
 
     ProjectionType projectionType_{ ProjectionType::Orthographic };
 

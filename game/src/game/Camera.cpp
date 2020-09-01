@@ -56,58 +56,6 @@ void Camera::UpdateMatrics()
 //------------------------------------------------------------------------------
 void Camera::Update()
 {
-    constexpr bool enable = false;
-    if (enable)
-    {
-        bool isMoveMode = g_Input->GetState(VK_RBUTTON);
-        if (isMoveMode)
-        {
-            g_Input->SetMouseMode(MouseMode::Relative);
-            Vec2 mouseDelta = g_Input->GetMouseDelta();
-            angles_.x -= mouseDelta.y * 0.1f;
-            angles_.y -= mouseDelta.x * 0.1f;
-        
-            if (mouseDelta != Vec2{})
-            {
-                UpdateCameraVectors();
-            }
-        }
-        else
-        {
-            g_Input->SetMouseMode(MouseMode::Absolute);
-        }
-
-        if (isMoveMode)
-        {
-            if (g_Input->GetState('W'))
-            {
-                pos_ += forward_ * speed_ * g_Game->GetDTime();
-            }
-            else if (g_Input->GetState('S'))
-            {
-                pos_ -= forward_ * speed_ * g_Game->GetDTime();
-            }
-    
-            if (g_Input->GetState('D'))
-            {
-                pos_ += right_ * speed_ * g_Game->GetDTime();
-            }
-            else if (g_Input->GetState('A'))
-            {
-                pos_ -= right_ * speed_ * g_Game->GetDTime();
-            }
-
-            if (g_Input->GetState('Q'))
-            {
-                pos_ += Vec3::UP() * speed_ * g_Game->GetDTime();
-            }
-            else if (g_Input->GetState('E'))
-            {
-                pos_ -= Vec3::UP() * speed_ * g_Game->GetDTime();
-            }
-        }
-    }
-
     UpdateMatrics();
 }
 
@@ -127,6 +75,12 @@ const Mat44& Camera::ToProjection() const
 const Vec3& Camera::Position() const
 {
     return pos_;
+}
+
+//------------------------------------------------------------------------------
+void Camera::SetPosition(const Vec3& pos)
+{
+    pos_ = pos;
 }
 
 }
