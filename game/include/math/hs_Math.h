@@ -462,4 +462,46 @@ inline Mat44 MakeLookAt(const Vec3& pos, const Vec3& target)
     );
 }
 
+//------------------------------------------------------------------------------
+inline float ToLinear(float srgb)
+{
+    if (srgb <= 0.04045)
+        return srgb / 12.92;
+    else
+        return pow((srgb + 0.055) / 1.055, 2.4);
+}
+
+//------------------------------------------------------------------------------
+inline float ToSrgb(float linear)
+{
+    if (linear <= 0.0031308)
+        return linear * 12.92;
+    else
+        return 1.055 * pow(linear, 1.0 / 2.4) - 0.055;
+}
+
+//------------------------------------------------------------------------------
+struct Color
+{
+public:
+    union
+    {
+        float c[4];
+        struct
+        {
+            float r, g, b, a;
+        };
+    };
+
+    static Color ToLinear(const Color& srgb)
+    {
+        return Color{ ::hs::ToLinear(srgb.r), ::hs::ToLinear(srgb.g), ::hs::ToLinear(srgb.b), srgb.a };
+    }
+
+    static Color ToSrgb(const Color& linear)
+    {
+        return Color{ ::hs::ToSrgb(linear.r), ::hs::ToSrgb(linear.g), ::hs::ToSrgb(linear.b), linear.a };
+    }
+};
+
 }

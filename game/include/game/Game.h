@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/Enums.h"
+#include "game/Camera.h"
 
+#include "common/Enums.h"
 #include "common/Types.h"
 
 namespace hs

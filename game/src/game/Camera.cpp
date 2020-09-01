@@ -39,61 +39,76 @@ void Camera::UpdateCameraVectors()
 }
 
 //------------------------------------------------------------------------------
-void Camera::Update()
+void Camera::UpdateMatrics()
 {
-    bool isMoveMode = g_Input->GetState(VK_RBUTTON);
-    if (isMoveMode)
+    if (projectionType_ == ProjectionType::Orthographic)
     {
-        g_Input->SetMouseMode(MouseMode::Relative);
-        Vec2 mouseDelta = g_Input->GetMouseDelta();
-        angles_.x -= mouseDelta.y * 0.1f;
-        angles_.y -= mouseDelta.x * 0.1f;
-        
-        if (mouseDelta != Vec2{})
-        {
-            UpdateCameraVectors();
-        }
+        projection_ = MakeOrthographicProjection(-extent_, extent_, -extent_ / g_Render->GetAspect(), extent_ / g_Render->GetAspect(), near_, far_);
     }
     else
     {
-        g_Input->SetMouseMode(MouseMode::Absolute);
+        projection_ = MakePerspectiveProjection(DegToRad(fovy_), g_Render->GetAspect(), near_, far_);
     }
-
-    if (isMoveMode)
-    {
-        if (g_Input->GetState('W'))
-        {
-            pos_ += forward_ * speed_ * g_Game->GetDTime();
-        }
-        else if (g_Input->GetState('S'))
-        {
-            pos_ -= forward_ * speed_ * g_Game->GetDTime();
-        }
-    
-        if (g_Input->GetState('D'))
-        {
-            pos_ += right_ * speed_ * g_Game->GetDTime();
-        }
-        else if (g_Input->GetState('A'))
-        {
-            pos_ -= right_ * speed_ * g_Game->GetDTime();
-        }
-
-        if (g_Input->GetState('Q'))
-        {
-            pos_ += Vec3::UP() * speed_ * g_Game->GetDTime();
-        }
-        else if (g_Input->GetState('E'))
-        {
-            pos_ -= Vec3::UP() * speed_ * g_Game->GetDTime();
-        }
-    }
-
-    float extent = 20;
-    //projection_ = MakeOrthographicProjection(-extent, extent, -extent / g_Render->GetAspect(), extent / g_Render->GetAspect(), 0.1f, 1000);
-    projection_ = MakePerspectiveProjection(DegToRad(fovy_), g_Render->GetAspect(), near_, far_);
 
     toCamera_ = MakeLookAt(pos_, pos_ + forward_);
+}
+
+//------------------------------------------------------------------------------
+void Camera::Update()
+{
+    constexpr bool enable = false;
+    if (enable)
+    {
+        bool isMoveMode = g_Input->GetState(VK_RBUTTON);
+        if (isMoveMode)
+        {
+            g_Input->SetMouseMode(MouseMode::Relative);
+            Vec2 mouseDelta = g_Input->GetMouseDelta();
+            angles_.x -= mouseDelta.y * 0.1f;
+            angles_.y -= mouseDelta.x * 0.1f;
+        
+            if (mouseDelta != Vec2{})
+            {
+                UpdateCameraVectors();
+            }
+        }
+        else
+        {
+            g_Input->SetMouseMode(MouseMode::Absolute);
+        }
+
+        if (isMoveMode)
+        {
+            if (g_Input->GetState('W'))
+            {
+                pos_ += forward_ * speed_ * g_Game->GetDTime();
+            }
+            else if (g_Input->GetState('S'))
+            {
+                pos_ -= forward_ * speed_ * g_Game->GetDTime();
+            }
+    
+            if (g_Input->GetState('D'))
+            {
+                pos_ += right_ * speed_ * g_Game->GetDTime();
+            }
+            else if (g_Input->GetState('A'))
+            {
+                pos_ -= right_ * speed_ * g_Game->GetDTime();
+            }
+
+            if (g_Input->GetState('Q'))
+            {
+                pos_ += Vec3::UP() * speed_ * g_Game->GetDTime();
+            }
+            else if (g_Input->GetState('E'))
+            {
+                pos_ -= Vec3::UP() * speed_ * g_Game->GetDTime();
+            }
+        }
+    }
+
+    UpdateMatrics();
 }
 
 //------------------------------------------------------------------------------

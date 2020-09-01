@@ -9,6 +9,13 @@ namespace hs
 struct PropertyContainer;
 
 //------------------------------------------------------------------------------
+enum class ProjectionType
+{
+    Perspective,
+    Orthographic
+};
+
+//------------------------------------------------------------------------------
 class Camera
 {
 public:
@@ -20,13 +27,14 @@ public:
     void FillData(PropertyContainer& data);
 
     void Update();
+    void UpdateMatrics();
 
 private:
     Mat44 toCamera_;
     Mat44 projection_;
 
-    Vec3 pos_{ 0, 0, 0 };
-    Vec3 forward_{Vec3::FORWARD() };
+    Vec3 pos_{ 0, 0, -5 };
+    Vec3 forward_{ Vec3::FORWARD() };
     Vec3 right_{ Vec3::RIGHT() };
 
     Vec2 angles_{ 0, 90 };
@@ -34,6 +42,9 @@ private:
     float fovy_{ 75 };
     float near_{ 0.01f };
     float far_{ 1000 };
+    float extent_{ 4 };
+
+    ProjectionType projectionType_{ ProjectionType::Orthographic };
 
     void UpdateCameraVectors();
 };

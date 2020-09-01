@@ -889,13 +889,15 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         }
     }
 
+    camera_.UpdateMatrics();
+
     // 
     serializationManager_ = new SerializationManager();
     if (FAILED(serializationManager_->Init()))
         return R_FAIL;
 
-    drawCanvas_ = new DrawCanvas();
-    if (FAILED(drawCanvas_->Init()))
+    //drawCanvas_ = new DrawCanvas();
+    if (drawCanvas_ && FAILED(drawCanvas_->Init()))
         return R_FAIL;
 
     state_.Reset();
@@ -1249,8 +1251,10 @@ void Render::Update(float dTime)
         frameBuffer_[currentBBIdx_] = frameBuffer;
     }
 
+    const Color clearColor = Color::ToLinear(Color{ 0.72f, 0.74f, 0.98f, 1.0f });
+
     VkClearValue clearVal[2] = {};
-    clearVal[0].color = VkClearColorValue { 0.1f, 0.1f, 0.7f, 1.0f };
+    clearVal[0].color = VkClearColorValue { clearColor.r, clearColor.g, clearColor.b, clearColor.a };
     clearVal[1].depthStencil =  VkClearDepthStencilValue { 1, 0 };
 
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -1492,6 +1496,18 @@ uint Render::GetOrCreateVertexLayout(VkPipelineVertexInputStateCreateInfo info)
 
     vertexLayouts_.Add(info);
     return vertexLayouts_.Count() - 1;
+}
+
+//------------------------------------------------------------------------------
+const Camera& Render::GetCamera() const
+{
+    return camera_;
+}
+
+//------------------------------------------------------------------------------
+Camera& Render::GetCamera()
+{
+    return camera_;
 }
 
 }

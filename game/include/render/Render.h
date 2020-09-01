@@ -151,6 +151,11 @@ public:
     // Vertex layout manager
     uint GetOrCreateVertexLayout(VkPipelineVertexInputStateCreateInfo info);
 
+    //----------------------
+    // Camera
+    const Camera& GetCamera() const;
+    Camera& GetCamera();
+
 private:
     static constexpr auto VK_VERSION = VK_API_VERSION_1_1;
     static constexpr uint VKR_INVALID = -1;
@@ -264,6 +269,10 @@ private:
     //----------------------
     // Serialization
     SerializationManager* serializationManager_;
+
+    //----------------------
+    // Camera
+    Camera camera_;
 };
 
 
