@@ -4,6 +4,7 @@
 
 #include "common/Enums.h"
 #include "common/Types.h"
+#include "math/hs_Math.h"
 
 namespace hs
 {
@@ -17,11 +18,20 @@ public:
 };
 
 //------------------------------------------------------------------------------
+struct TileDrawData
+{
+    Texture* texture_;
+    Vec4 uvBox_;
+    Vec2 pos_;
+};
+
+//------------------------------------------------------------------------------
 class TileMaterial : public Material
 {
 public:
     RESULT Init() override;
     void Draw() override;
+    void DrawTile(const TileDrawData& data);
 
 private:
     Shader*         tileVert_{};
@@ -29,6 +39,7 @@ private:
     Texture*        tileTex_{};
     VertexBuffer*   tilesBuffer_{};
     uint            tileVertexLayout_{};
+    uint            vertsDrawn_{};
 };
 
 //------------------------------------------------------------------------------

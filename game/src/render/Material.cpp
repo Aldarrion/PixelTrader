@@ -153,6 +153,74 @@ void TileMaterial::Draw()
 }
 
 //------------------------------------------------------------------------------
+void TileMaterial::DrawTile(const TileDrawData& data)
+{
+    {
+        if (vertsDrawn_ > 6000)
+            vertsDrawn_ = 0;
+
+        constexpr float scale = 16;
+        auto mapped = (TileVertex*)tilesBuffer_->Map() + vertsDrawn_;
+
+        mapped[0].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[0].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
+        mapped[0].color_ = 0xffffffff;
+
+        mapped[1].position_ = Vec4{ 0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[1].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y + data.uvBox_.w };
+        mapped[1].color_ = 0xffffffff;
+
+        mapped[2].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[2].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
+        mapped[2].color_ = 0xffffffff;
+
+        mapped[3].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[3].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
+        mapped[3].color_ = 0xffffffff;
+
+        mapped[4].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[4].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
+        mapped[4].color_ = 0xffffffff;
+
+        mapped[5].position_ = Vec4{ -0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[5].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y };
+        mapped[5].color_ = 0xffffffff;
+
+        tilesBuffer_->Unmap();
+    }
+
+    {
+        struct SceneData
+        {
+            Mat44   Projection;
+            Vec4    ViewPos;
+        };
+
+        void* mapped;
+        DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
+        auto ubo = (SceneData*)mapped;
+
+        Mat44 camMat = g_Render->GetCamera().ToCamera();
+        Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
+        ubo->Projection = projMat;
+
+        g_Render->GetUBOCache()->EndAlloc();
+        g_Render->SetDynamicUbo(1, &constBuffer);
+    }
+
+    g_Render->SetVertexLayout(0, tileVertexLayout_);
+    g_Render->SetVertexBuffer(0, tilesBuffer_, vertsDrawn_ * sizeof(TileVertex));
+    
+    g_Render->SetTexture(0, tileTex_); // TODO use texture from given data
+
+    g_Render->SetShader<PS_VERT>(tileVert_);
+    g_Render->SetShader<PS_FRAG>(tileFrag_);
+
+    g_Render->Draw(6, 0);
+    vertsDrawn_ += 6;
+}
+
+//------------------------------------------------------------------------------
 RESULT TexturedTriangleMaterial::Init()
 {
     {

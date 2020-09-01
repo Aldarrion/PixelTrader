@@ -43,7 +43,7 @@ private:
     float fovy_{ 75 };
     float near_{ 0.01f };
     float far_{ 1000 };
-    float extent_{ 64 };
+    float extent_{ 128 };
 
     ProjectionType projectionType_{ ProjectionType::Orthographic };
 

@@ -38,6 +38,8 @@ Game::~Game()
 //------------------------------------------------------------------------------
 RESULT Game::InitWin32()
 {
+
+
     return R_OK;
 }
 
@@ -51,7 +53,7 @@ void Game::Update(float dTime)
         Camera& cam = g_Render->GetCamera();
         Vec3 pos = cam.Position();
 
-        float speed{ 20 };
+        float speed{ 40 };
         if (g_Input->GetState('W'))
         {
             pos += Vec3::UP() * speed * GetDTime();

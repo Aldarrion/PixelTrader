@@ -55,6 +55,7 @@ class DynamicUBOCache;
 struct DynamicUBOEntry;
 
 class DrawCanvas;
+class TileRenderer;
 
 class SerializationManager;
 
@@ -254,6 +255,8 @@ private:
 
     Array<Material*> materials_;
     DrawCanvas* drawCanvas_{};
+
+    TileRenderer* tileRenderer_{};
 
     //----------------------
     // Vertex layout manager

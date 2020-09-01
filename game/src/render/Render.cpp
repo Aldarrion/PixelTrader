@@ -10,6 +10,7 @@
 #include "render/DynamicUniformBuffer.h"
 
 #include "game/DrawCanvas.h"
+#include "game/TileRenderer.h"
 
 #include "game/Serialization.h"
 #include "input/Input.h"
@@ -878,11 +879,11 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     //materials_.Add(new TexturedTriangleMaterial());
     //materials_.Add(new ShapeMaterial());
     //materials_.Add(new PhongMaterial());
-    materials_.Add(new TileMaterial());
+    //materials_.Add(new TileMaterial());
     
     for (int i = 0; i < materials_.Count(); ++i)
     {
-        if (FAILED(materials_[i]->Init()))
+        if (HS_FAILED(materials_[i]->Init()))
         {
             Log(LogLevel::Error, "Failed to init material");
             return R_FAIL;
@@ -893,11 +894,15 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     // 
     serializationManager_ = new SerializationManager();
-    if (FAILED(serializationManager_->Init()))
+    if (HS_FAILED(serializationManager_->Init()))
         return R_FAIL;
 
     //drawCanvas_ = new DrawCanvas();
-    if (drawCanvas_ && FAILED(drawCanvas_->Init()))
+    if (drawCanvas_ && HS_FAILED(drawCanvas_->Init()))
+        return R_FAIL;
+    
+    tileRenderer_ = new TileRenderer();
+    if (tileRenderer_ && HS_FAILED(tileRenderer_->Init()))
         return R_FAIL;
 
     state_.Reset();
@@ -1277,6 +1282,9 @@ void Render::Update(float dTime)
 
     if (drawCanvas_)
         drawCanvas_->Draw();
+
+    if (tileRenderer_)
+        tileRenderer_->Draw();
 
     //-------------------
     // Submit and Present
