@@ -46,8 +46,11 @@ private:
 
     float dTime_{};
 
-    Texture* groundTileTex_;
+    Texture* groundTileTex_{};
     Tile* groundTile_[3 * 3]{};
+
+    Texture* goldChestTex_{};
+    Tile* goldChestTile_{};
 };
 
 }

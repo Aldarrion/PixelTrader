@@ -189,6 +189,12 @@ public:
         return items_[count_ - 1];
     }
 
+    //------------------------------------------------------------------------------
+    T* Data() const
+    {
+        return items_;
+    }
+
 private:
     static constexpr size_t MIN_CAPACITY = 8;
 

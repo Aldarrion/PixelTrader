@@ -16,6 +16,8 @@ public:
         TEX_CUBE,
     };
 
+    static RESULT CreateTex2D(const char* file, const char* name, Texture** tex);
+
     Texture(VkFormat format, VkExtent3D size, Type type);
 
     RESULT Allocate(void** data, const char* diagName = nullptr);

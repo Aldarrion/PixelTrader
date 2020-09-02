@@ -22,6 +22,7 @@ struct TileDrawData
 {
     Texture* texture_;
     Vec4 uvBox_;
+    Vec2 size_;
     Vec3 pos_;
 };
 

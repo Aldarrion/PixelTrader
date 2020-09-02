@@ -148,30 +148,59 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         if (vertsDrawn_ > 6000)
             vertsDrawn_ = 0;
 
-        constexpr float scale = 16;
         auto mapped = (TileVertex*)tilesBuffer_->Map() + vertsDrawn_;
 
-        mapped[0].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, data.pos_.z, 1 };
+        mapped[0].position_ = Vec4{
+            data.pos_.x,
+            data.pos_.y,
+            data.pos_.z,
+            1 
+        };
         mapped[0].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[0].color_ = 0xffffffff;
 
-        mapped[1].position_ = Vec4{ 0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, data.pos_.z, 1 };
+        mapped[1].position_ = Vec4{
+            data.size_.x + data.pos_.x,
+            data.pos_.y,
+            data.pos_.z,
+            1 
+        };
         mapped[1].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y + data.uvBox_.w };
         mapped[1].color_ = 0xffffffff;
 
-        mapped[2].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, data.pos_.z, 1 };
+        mapped[2].position_ = Vec4{
+            data.size_.x + data.pos_.x,
+            data.size_.y + data.pos_.y,
+            data.pos_.z,
+            1
+        };
         mapped[2].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
         mapped[2].color_ = 0xffffffff;
 
-        mapped[3].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, data.pos_.z, 1 };
+        mapped[3].position_ = Vec4{
+            data.pos_.x,
+            data.pos_.y,
+            data.pos_.z,
+            1
+        };
         mapped[3].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[3].color_ = 0xffffffff;
 
-        mapped[4].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, data.pos_.z, 1 };
+        mapped[4].position_ = Vec4{
+            data.size_.x + data.pos_.x,
+            data.size_.y + data.pos_.y,
+            data.pos_.z,
+            1
+        };
         mapped[4].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
         mapped[4].color_ = 0xffffffff;
 
-        mapped[5].position_ = Vec4{ -0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, data.pos_.z, 1 };
+        mapped[5].position_ = Vec4{
+            data.pos_.x,
+            data.size_.y + data.pos_.y,
+            data.pos_.z,
+            1
+        };
         mapped[5].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y };
         mapped[5].color_ = 0xffffffff;
 

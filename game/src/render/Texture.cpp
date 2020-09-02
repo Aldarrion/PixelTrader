@@ -5,8 +5,32 @@
 #include "render/Buffer.h"
 #include "common/Logging.h"
 
+#include "render/hs_Image.h"
+
 namespace hs
 {
+
+//------------------------------------------------------------------------------
+RESULT Texture::CreateTex2D(const char* file, const char* name, Texture** tex)
+{
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    if (!pixels)
+    {
+        Log(LogLevel::Error, "Failed to read texture file: %s", file);
+        return R_FAIL;
+    }
+
+    *tex = new Texture(VK_FORMAT_R8G8B8A8_SRGB, VkExtent3D{ (uint)texWidth, (uint)texHeight, 1 }, Texture::Type::TEX_2D);
+    
+    auto texAllocRes = (*tex)->Allocate((void**)&pixels, name);
+    stbi_image_free(pixels);
+
+    if (HS_FAILED(texAllocRes))
+        return R_FAIL;
+
+    return R_OK;
+}
 
 //------------------------------------------------------------------------------
 Texture::Texture(VkFormat format, VkExtent3D size, Type type)

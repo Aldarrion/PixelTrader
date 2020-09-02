@@ -44,22 +44,19 @@ Game::~Game()
     {
         delete groundTile_[i];
     }
+
+    delete goldChestTex_;
+    delete goldChestTile_;
 }
 
 //------------------------------------------------------------------------------
 RESULT Game::InitWin32()
 {
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("textures/Ground1.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
-    groundTileTex_ = new Texture(VK_FORMAT_R8G8B8A8_SRGB, VkExtent3D{ (uint)texWidth, (uint)texHeight, 1 }, Texture::Type::TEX_2D);
-    
-    auto texAllocRes = groundTileTex_->Allocate((void**)&pixels, "GrassTile");
-    stbi_image_free(pixels);
-
-    if (HS_FAILED(texAllocRes))
+    if (HS_FAILED(Texture::CreateTex2D("textures/Ground1.png", "GrassTile", &groundTileTex_)))
         return R_FAIL;
 
+    if (HS_FAILED(Texture::CreateTex2D("textures/GoldChest.png", "GoldChest", &goldChestTex_)))
+        return R_FAIL;
 
     constexpr float uvSize = 16.0f / (3 * 16.0f);
     for (int y = 0; y < 3; ++y)
@@ -70,16 +67,22 @@ RESULT Game::InitWin32()
 
             t->texture_ = groundTileTex_;
             t->uvBox_ = Vec4{ uvSize * x, uvSize * y, uvSize, uvSize };
+            t->size_ = Vec2{ 16, 16 };
 
             groundTile_[3 * y + x] = t;
         }
     }
 
+    goldChestTile_ = new Tile();
+    goldChestTile_->size_ = Vec2{ 16, 16 };
+    goldChestTile_->uvBox_ = Vec4{ 0, 0, 1, 1 };
+    goldChestTile_->texture_ = goldChestTex_;
+
     return R_OK;
 }
 
 //------------------------------------------------------------------------------
-Vec3 TilePos(int x, int y, int z = 0)
+Vec3 TilePos(float x, float y, float z = 0)
 {
     return Vec3{ (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)z };
 }
@@ -121,6 +124,8 @@ void Game::Update(float dTime)
     TileRenderer* tr = g_Render->GetTileRenderer();
 
     tr->ClearTiles();
+
+    tr->AddTile(goldChestTile_, TilePos(0, 0.5f, 1));
 
     int y = 0;
     tr->AddTile(groundTile_[TOP_LEFT], TilePos(-5, y));
