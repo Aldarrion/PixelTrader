@@ -3,6 +3,9 @@
 #include "common/Types.h"
 #include "common/hs_Assert.h"
 
+#include <cstdlib>
+#include <cstring>
+
 namespace hs
 {
 

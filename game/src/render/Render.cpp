@@ -96,7 +96,7 @@ bool CheckResult(VkResult result, const char* file, int line, const char* fun)
     return true;
 }
 
-#if VKR_DEBUG
+#if HS_DEBUG
     //------------------------------------------------------------------------------
     VkResult CreateDebugReportCallbackEXT(
         VkInstance instance,
@@ -127,7 +127,7 @@ struct BindingUBO
     uint SRV[SRV_SLOT_COUNT]{};
 };
 
-#if VKR_DEBUG
+#if HS_DEBUG
     //------------------------------------------------------------------------------
     void QueueFamiliesToString(uint bits, char* str)
     {
@@ -317,7 +317,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     instInfo.sType              = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pApplicationInfo   = &appInfo;
 
-    #if VKR_DEBUG
+    #if HS_DEBUG
         const char* validationLayers[] = {
             "VK_LAYER_LUNARG_standard_validation",
         };
@@ -339,7 +339,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     if (VKR_FAILED(vkCreateInstance(&instInfo, nullptr, &vkInstance_)))
         return R_FAIL;
 
-    #if VKR_DEBUG
+    #if HS_DEBUG
         VkDebugReportCallbackCreateInfoEXT createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
         createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
@@ -391,7 +391,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(vkPhysicalDevice_, i);
         //VKR_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice_, i, vkSurface_, &presentSupport));
         
-        #if VKR_DEBUG
+        #if HS_DEBUG
             static char buff[512];
             QueueFamiliesToString(queueProps[i].queueFlags, buff);
             Log(LogLevel::Info, "\t%d: count %d, present %d, bits %s", i, queueProps[i].queueCount, presentSupport, buff);
@@ -1013,8 +1013,8 @@ RESULT Render::PrepareForDraw()
     }
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     {
-        VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.blendEnable            = VK_TRUE;
         colorBlendAttachment.srcColorBlendFactor    = VK_BLEND_FACTOR_SRC_ALPHA;
         colorBlendAttachment.dstColorBlendFactor    = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -1516,6 +1516,12 @@ const Camera& Render::GetCamera() const
 Camera& Render::GetCamera()
 {
     return camera_;
+}
+
+//------------------------------------------------------------------------------
+TileRenderer* Render::GetTileRenderer() const
+{
+    return tileRenderer_;
 }
 
 }

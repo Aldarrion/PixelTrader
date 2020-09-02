@@ -22,7 +22,7 @@ struct TileDrawData
 {
     Texture* texture_;
     Vec4 uvBox_;
-    Vec2 pos_;
+    Vec3 pos_;
 };
 
 //------------------------------------------------------------------------------
@@ -36,7 +36,6 @@ public:
 private:
     Shader*         tileVert_{};
     Shader*         tileFrag_{};
-    Texture*        tileTex_{};
     VertexBuffer*   tilesBuffer_{};
     uint            tileVertexLayout_{};
     uint            vertsDrawn_{};

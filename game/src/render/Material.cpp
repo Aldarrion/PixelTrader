@@ -60,17 +60,6 @@ uint TileVertexLayout()
 //------------------------------------------------------------------------------
 RESULT TileMaterial::Init()
 {
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("textures/Ground1.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
-    tileTex_ = new Texture(VK_FORMAT_R8G8B8A8_SRGB, VkExtent3D{ (uint)texWidth, (uint)texHeight, 1 }, Texture::Type::TEX_2D);
-    
-    auto texAllocRes = tileTex_->Allocate((void**)&pixels, "GrassTile");
-    stbi_image_free(pixels);
-
-    if (HS_FAILED(texAllocRes))
-        return R_FAIL;
-
     //
     tileVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Tile_vs.hlsl");
     tileFrag_ = g_Render->GetShaderManager()->GetOrCreateShader("Tile_fs.hlsl");
@@ -144,7 +133,7 @@ void TileMaterial::Draw()
     g_Render->SetVertexLayout(0, tileVertexLayout_);
     g_Render->SetVertexBuffer(0, tilesBuffer_, 0);
     
-    g_Render->SetTexture(0, tileTex_);
+    //g_Render->SetTexture(0, tileTex_);
 
     g_Render->SetShader<PS_VERT>(tileVert_);
     g_Render->SetShader<PS_FRAG>(tileFrag_);
@@ -162,27 +151,27 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         constexpr float scale = 16;
         auto mapped = (TileVertex*)tilesBuffer_->Map() + vertsDrawn_;
 
-        mapped[0].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[0].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, data.pos_.z, 1 };
         mapped[0].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[0].color_ = 0xffffffff;
 
-        mapped[1].position_ = Vec4{ 0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[1].position_ = Vec4{ 0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, data.pos_.z, 1 };
         mapped[1].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y + data.uvBox_.w };
         mapped[1].color_ = 0xffffffff;
 
-        mapped[2].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[2].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, data.pos_.z, 1 };
         mapped[2].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
         mapped[2].color_ = 0xffffffff;
 
-        mapped[3].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[3].position_ = Vec4{ -0.5f * scale + data.pos_.x, -0.5f * scale + data.pos_.y, data.pos_.z, 1 };
         mapped[3].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[3].color_ = 0xffffffff;
 
-        mapped[4].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[4].position_ = Vec4{ 0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, data.pos_.z, 1 };
         mapped[4].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
         mapped[4].color_ = 0xffffffff;
 
-        mapped[5].position_ = Vec4{ -0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, 0, 1 };
+        mapped[5].position_ = Vec4{ -0.5f * scale + data.pos_.x, 0.5f * scale + data.pos_.y, data.pos_.z, 1 };
         mapped[5].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y };
         mapped[5].color_ = 0xffffffff;
 
@@ -211,7 +200,7 @@ void TileMaterial::DrawTile(const TileDrawData& data)
     g_Render->SetVertexLayout(0, tileVertexLayout_);
     g_Render->SetVertexBuffer(0, tilesBuffer_, vertsDrawn_ * sizeof(TileVertex));
     
-    g_Render->SetTexture(0, tileTex_); // TODO use texture from given data
+    g_Render->SetTexture(0, data.texture_);
 
     g_Render->SetShader<PS_VERT>(tileVert_);
     g_Render->SetShader<PS_FRAG>(tileFrag_);

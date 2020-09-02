@@ -157,6 +157,9 @@ public:
     const Camera& GetCamera() const;
     Camera& GetCamera();
 
+    // Tile renderer
+    TileRenderer* GetTileRenderer() const;
+
 private:
     static constexpr auto VK_VERSION = VK_API_VERSION_1_1;
     static constexpr uint VKR_INVALID = -1;
@@ -177,7 +180,7 @@ private:
     VkPhysicalDeviceProperties vkPhysicalDeviceProperties_{};
 
     // Debug
-    #if VKR_DEBUG
+    #if HS_DEBUG
         VkDebugReportCallbackEXT debugReportCallback_{};
     #endif
 

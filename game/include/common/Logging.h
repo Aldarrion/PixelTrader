@@ -25,7 +25,7 @@ void LogMat44(const Mat44& m);
 
 }
 
-#if VKR_DEBUG
+#if HS_DEBUG
     #define DBG_LOG(msg, ...) hs::Log(hs::LogLevel::Info, msg, __VA_ARGS__)
 #else
     #define DBG_LOG(msg, ...)
