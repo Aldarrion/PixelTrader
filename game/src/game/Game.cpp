@@ -214,5 +214,17 @@ float Game::GetDTime() const
     return dTime_;
 }
 
+//------------------------------------------------------------------------------
+bool Game::IsWindowActive() const
+{
+    return isWindowActive_;
+}
+
+//------------------------------------------------------------------------------
+void Game::SetWindowActive(bool isActive)
+{
+    isWindowActive_ = isActive;
+}
+
 }
 

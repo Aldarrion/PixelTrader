@@ -51,6 +51,8 @@ public:
     void Update(float dTime);
 
     float GetDTime() const;
+    bool IsWindowActive() const;
+    void SetWindowActive(bool isActive);
 
 private:
     enum GroundTile
@@ -65,6 +67,8 @@ private:
         BOT,
         BOT_RIGHT,
     };
+
+    bool isWindowActive_{};
 
     float dTime_{};
 

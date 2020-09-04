@@ -1,7 +1,10 @@
 #include "input/Input.h"
 
-#include "common/Logging.h"
+#include "game/Game.h"
+
 #include "render/Render.h"
+
+#include "common/Logging.h"
 
 #include "platform/hs_Windows.h"
 
@@ -104,6 +107,8 @@ bool Input::IsKeyUp(int keyCode) const
 //------------------------------------------------------------------------------
 bool Input::GetState(int keyCode) const
 {
+    if (!g_Game->IsWindowActive())
+        return false;
     return (GetKeyState(keyCode) & 0x8000) != 0;
 }
 

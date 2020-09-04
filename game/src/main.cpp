@@ -15,10 +15,23 @@
 HWND g_hwnd{};
 
 //------------------------------------------------------------------------------
+static bool g_isWindowActive = false;
+
+//------------------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
     {
+        case WM_NCACTIVATE:
+        case WM_ACTIVATEAPP:
+        case WM_ACTIVATE:
+        {
+            if (wParam)
+                g_isWindowActive = true;
+            else
+                g_isWindowActive = false;
+            return DefWindowProc(hWnd, msg, wParam, lParam);
+        }
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
@@ -199,6 +212,8 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             start = std::chrono::high_resolution_clock::now();
 
             float dTime = elapsed.count() / (1000.0f * 1000 * 1000);
+
+            hs::g_Game->SetWindowActive(g_isWindowActive);
 
             hs::g_Input->Update();
             hs::g_Game->Update(dTime);
