@@ -42,6 +42,21 @@ struct AnimationState
 };
 
 //------------------------------------------------------------------------------
+struct TileArchetype
+{
+    Array<Vec3> Positions;
+    Array<Tile*> Tiles;
+};
+
+//------------------------------------------------------------------------------
+struct AnimatedTileArchetype
+{
+    Array<Vec3> Positions;
+    Array<Tile*> Tiles;
+    Array<AnimationState> Animations;
+};
+
+//------------------------------------------------------------------------------
 class Game
 {
 public:
@@ -72,6 +87,7 @@ private:
 
     float dTime_{};
 
+    // TODO move to texure/tile management
     Texture* groundTileTex_{};
     Tile* groundTile_[3 * 3]{};
 
@@ -80,7 +96,14 @@ private:
 
     Texture* rockTex_[2]{};
     Tile* rockTile_[2]{};
-    AnimationState rockIdle_{};
+
+    // Archetypes
+    TileArchetype tiles_{};
+    AnimatedTileArchetype animatedTiles_{};
+
+    void AddTile(const Vec3& pos, Tile* tile);
+    void AddAnimatedTile(const Vec3& pos, const AnimationState& animation);
+    void AnimateTiles();
 };
 
 }

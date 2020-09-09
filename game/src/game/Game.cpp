@@ -83,6 +83,37 @@ Game::~Game()
 }
 
 //------------------------------------------------------------------------------
+void Game::AddTile(const Vec3& pos, Tile* tile)
+{
+    tiles_.Positions.Add(pos);
+    tiles_.Tiles.Add(tile);
+}
+
+//------------------------------------------------------------------------------
+void Game::AddAnimatedTile(const Vec3& pos, const AnimationState& animation)
+{
+    animatedTiles_.Positions.Add(pos);
+    animatedTiles_.Animations.Add(animation);
+    animatedTiles_.Tiles.Add(animation.GetCurrentTile());
+}
+
+//------------------------------------------------------------------------------
+void Game::AnimateTiles()
+{
+    for (int i = 0; i < animatedTiles_.Animations.Count(); ++i)
+    {
+        animatedTiles_.Animations[i].Update(dTime_);
+        animatedTiles_.Tiles[i] = animatedTiles_.Animations[i].GetCurrentTile();
+    }
+}
+
+//------------------------------------------------------------------------------
+Vec3 TilePos(float x, float y, float z = 0)
+{
+    return Vec3{ (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)z };
+}
+
+//------------------------------------------------------------------------------
 RESULT Game::InitWin32()
 {
     if (HS_FAILED(Texture::CreateTex2D("textures/Ground1.png", "GrassTile", &groundTileTex_)))
@@ -111,6 +142,34 @@ RESULT Game::InitWin32()
     goldChestTile_->uvBox_ = Vec4{ 0, 0, 1, 1 };
     goldChestTile_->texture_ = goldChestTex_;
 
+    AddTile(TilePos(0, 0.5f, 1), goldChestTile_);
+
+    int left = -6;
+    int width = 12;
+    int height = 10;
+
+    int y = 0;
+    AddTile(TilePos(left, y), groundTile_[TOP_LEFT]);
+    for (int i = 0; i < width; ++i)
+        AddTile(TilePos(left + 1 + i, y), groundTile_[TOP]);
+    AddTile(TilePos(left + width + 1, y), groundTile_[TOP_RIGHT]);
+    
+    int j = 0;
+    for (; j < height; j++)
+    {
+        y = -1 - j;
+        AddTile(TilePos(left, y), groundTile_[MID_LEFT]);
+        for (int i = 0; i < width; ++i)
+            AddTile(TilePos(left + 1 + i, y), groundTile_[MID]);
+        AddTile(TilePos(left + width + 1, y), groundTile_[MID_RIGHT]);
+    }
+
+    y = -j - 1;
+    AddTile(TilePos(left, y), groundTile_[BOT_LEFT]);
+    for (int i = 0; i < width; ++i)
+        AddTile(TilePos(left + 1 + i, y), groundTile_[BOT]);
+    AddTile(TilePos(left + width + 1, y), groundTile_[BOT_RIGHT]);
+
 
     if (HS_FAILED(Texture::CreateTex2D("textures/Rock1.png", "Rock01", &rockTex_[0])))
         return R_FAIL;
@@ -128,16 +187,13 @@ RESULT Game::InitWin32()
         rockIdleSegments.Add(AnimationSegment{ rockTile_[i], 0.5f });
     }
 
-    rockIdle_.Init(rockIdleSegments);
+    AnimationState rockIdle{};
+    rockIdle.Init(rockIdleSegments);
+    AddAnimatedTile(TilePos(-2, 0.5f, 1), rockIdle);
 
     return R_OK;
 }
 
-//------------------------------------------------------------------------------
-Vec3 TilePos(float x, float y, float z = 0)
-{
-    return Vec3{ (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)z };
-}
 
 //------------------------------------------------------------------------------
 void Game::Update(float dTime)
@@ -172,40 +228,24 @@ void Game::Update(float dTime)
         cam.UpdateMatrics();
     }
 
+    AnimateTiles();
+
     // Draw calls
     TileRenderer* tr = g_Render->GetTileRenderer();
 
     tr->ClearTiles();
 
-    tr->AddTile(goldChestTile_, TilePos(0, 0.5f, 1));
-
-    int y = 0;
-    tr->AddTile(groundTile_[TOP_LEFT], TilePos(-5, y));
-    for (int i = 0; i < 10; ++i)
-        tr->AddTile(groundTile_[TOP], TilePos(-4 + i, y));
-    tr->AddTile(groundTile_[TOP_RIGHT], TilePos(6, y));
-    
-    int j = 0;
-    for (; j < 10; j++)
+    // Regular tiles
+    for (int i = 0; i < tiles_.Positions.Count(); ++i)
     {
-        y = -1 - j;
-        tr->AddTile(groundTile_[MID_LEFT], TilePos(-5, y));
-        for (int i = 0; i < 10; ++i)
-            tr->AddTile(groundTile_[MID], TilePos(-4 + i, y));
-        tr->AddTile(groundTile_[MID_RIGHT], TilePos(6, y));
+        tr->AddTile(tiles_.Tiles[i], tiles_.Positions[i]);
     }
 
-    y = -j - 1;
-    tr->AddTile(groundTile_[BOT_LEFT], TilePos(-5, y));
-    for (int i = 0; i < 10; ++i)
-        tr->AddTile(groundTile_[BOT], TilePos(-4 + i, y));
-    tr->AddTile(groundTile_[BOT_RIGHT], TilePos(6, y));
-
-
-    rockIdle_.Update(dTime);
-
-    Tile* rockTile = rockIdle_.GetCurrentTile();
-    tr->AddTile(rockTile, TilePos(-2, 0.5f, 1));
+    // Animated tiles
+    for (int i = 0; i < animatedTiles_.Tiles.Count(); ++i)
+    {
+        tr->AddTile(animatedTiles_.Tiles[i], animatedTiles_.Positions[i]);
+    }
 }
 
 //------------------------------------------------------------------------------
