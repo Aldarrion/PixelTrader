@@ -92,18 +92,18 @@ void Game::AddTile(const Vec3& pos, Tile* tile)
 //------------------------------------------------------------------------------
 void Game::AddAnimatedTile(const Vec3& pos, const AnimationState& animation)
 {
-    animatedTiles_.Positions.Add(pos);
-    animatedTiles_.Animations.Add(animation);
-    animatedTiles_.Tiles.Add(animation.GetCurrentTile());
+    characters_.Positions.Add(pos);
+    characters_.Animations.Add(animation);
+    characters_.Tiles.Add(animation.GetCurrentTile());
 }
 
 //------------------------------------------------------------------------------
 void Game::AnimateTiles()
 {
-    for (int i = 0; i < animatedTiles_.Animations.Count(); ++i)
+    for (int i = 0; i < characters_.Animations.Count(); ++i)
     {
-        animatedTiles_.Animations[i].Update(dTime_);
-        animatedTiles_.Tiles[i] = animatedTiles_.Animations[i].GetCurrentTile();
+        characters_.Animations[i].Update(dTime_);
+        characters_.Tiles[i] = characters_.Animations[i].GetCurrentTile();
     }
 }
 
@@ -202,9 +202,8 @@ void Game::Update(float dTime)
 
     // Move camera
     {
-        Camera& cam = g_Render->GetCamera();
-        Vec3 pos = cam.Position();
-
+        // Assume "player" is the first character
+        Vec3& pos = characters_.Positions[0];
         float speed{ 40 };
         if (g_Input->GetState('W'))
         {
@@ -224,7 +223,8 @@ void Game::Update(float dTime)
             pos -= Vec3::RIGHT() * speed * GetDTime();
         }
 
-        cam.SetPosition(pos);
+        Camera& cam = g_Render->GetCamera();
+        cam.SetPosition(Vec2{ pos.x, pos.y });
         cam.UpdateMatrics();
     }
 
@@ -242,9 +242,9 @@ void Game::Update(float dTime)
     }
 
     // Animated tiles
-    for (int i = 0; i < animatedTiles_.Tiles.Count(); ++i)
+    for (int i = 0; i < characters_.Tiles.Count(); ++i)
     {
-        tr->AddTile(animatedTiles_.Tiles[i], animatedTiles_.Positions[i]);
+        tr->AddTile(characters_.Tiles[i], characters_.Positions[i]);
     }
 }
 

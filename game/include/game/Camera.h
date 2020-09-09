@@ -24,6 +24,7 @@ public:
     const Vec3& Position() const;
 
     void SetPosition(const Vec3& pos);
+    void SetPosition(const Vec2& pos);
 
     void Init(const PropertyContainer& data);
     void FillData(PropertyContainer& data);

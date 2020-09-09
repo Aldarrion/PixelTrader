@@ -83,4 +83,10 @@ void Camera::SetPosition(const Vec3& pos)
     pos_ = pos;
 }
 
+//------------------------------------------------------------------------------
+void Camera::SetPosition(const Vec2& pos)
+{
+    pos_ = Vec3{ pos.x, pos.y, pos_.z };
+}
+
 }
