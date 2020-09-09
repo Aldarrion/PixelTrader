@@ -72,11 +72,9 @@ void DestroyGame()
 Game::~Game()
 {
     delete groundTileTex_;
-    for (uint i = 0; i < hs_arr_len(groundTile_); ++i)
-        delete groundTile_[i];
-
     delete goldChestTex_;
-    delete goldChestTile_;
+    delete forestTex_;
+    delete forestDoorTex_;
 
     for (uint i = 0; i < hs_arr_len(rockTex_); ++i)
         delete rockTex_[i];
@@ -114,12 +112,22 @@ Vec3 TilePos(float x, float y, float z = 0)
 }
 
 //------------------------------------------------------------------------------
+RESULT MakeSimpleTile(const char* texPath, const char* name, Tile& t, Texture** tex)
+{
+    if (HS_FAILED(Texture::CreateTex2D(texPath, name, tex)))
+        return R_FAIL;
+
+    t.size_ = Vec2{ (float)(*tex)->GetWidth(), (float)(*tex)->GetHeight() };
+    t.uvBox_ = Vec4{ 0, 0, 1, 1 };
+    t.texture_ = *tex;
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
 RESULT Game::InitWin32()
 {
     if (HS_FAILED(Texture::CreateTex2D("textures/Ground1.png", "GrassTile", &groundTileTex_)))
-        return R_FAIL;
-
-    if (HS_FAILED(Texture::CreateTex2D("textures/GoldChest.png", "GoldChest", &goldChestTex_)))
         return R_FAIL;
 
     constexpr float uvSize = 16.0f / (3 * 16.0f);
@@ -127,68 +135,73 @@ RESULT Game::InitWin32()
     {
         for (int x = 0; x < 3; ++x)
         {
-            Tile* t = new Tile();
+            Tile t{};
 
-            t->texture_ = groundTileTex_;
-            t->uvBox_ = Vec4{ uvSize * x, uvSize * y, uvSize, uvSize };
-            t->size_ = Vec2{ 16, 16 };
+            t.texture_ = groundTileTex_;
+            t.uvBox_ = Vec4{ uvSize * x, uvSize * y, uvSize, uvSize };
+            t.size_ = Vec2{ 16, 16 };
 
             groundTile_[3 * y + x] = t;
         }
     }
 
-    goldChestTile_ = new Tile();
-    goldChestTile_->size_ = Vec2{ 32, 32 };
-    goldChestTile_->uvBox_ = Vec4{ 0, 0, 1, 1 };
-    goldChestTile_->texture_ = goldChestTex_;
+    if (HS_FAILED(MakeSimpleTile("textures/GoldChest.png", "GoldChest", goldChestTile_, &goldChestTex_)))
+        return R_FAIL;
 
-    AddTile(TilePos(0, 0.5f, 1), goldChestTile_);
+    if (HS_FAILED(MakeSimpleTile("textures/Forest.png", "Forest", forestTile_, &forestTex_)))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleTile("textures/ForestDoor.png", "ForestDoor", forestDoorTile_, &forestDoorTex_)))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleTile("textures/Rock1.png", "Rock01", rockTile_[0], &rockTex_[0])))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleTile("textures/Rock2.png", "Rock02", rockTile_[1], &rockTex_[1])))
+        return R_FAIL;
+
+    Array<AnimationSegment> rockIdleSegments;
+    for (uint i = 0; i < hs_arr_len(rockTex_); ++i)
+        rockIdleSegments.Add(AnimationSegment{ &rockTile_[i], 0.5f });
+
+    AnimationState rockIdle{};
+    rockIdle.Init(rockIdleSegments);
+
+
+    // ------------------------
+    // Create initial map state
+    AddTile(TilePos(0, 0.5f, 1), &goldChestTile_);
 
     int left = -6;
-    int width = 12;
+    int width = 15;
     int height = 10;
 
+    AddTile(TilePos(left, 0.4f, 3), &forestTile_);
+
+    AddTile(TilePos(left + 2, 0.3f, 2), &forestDoorTile_);
+
     int y = 0;
-    AddTile(TilePos(left, y), groundTile_[TOP_LEFT]);
+    AddTile(TilePos(left, y), &groundTile_[TOP_LEFT]);
     for (int i = 0; i < width; ++i)
-        AddTile(TilePos(left + 1 + i, y), groundTile_[TOP]);
-    AddTile(TilePos(left + width + 1, y), groundTile_[TOP_RIGHT]);
+        AddTile(TilePos(left + 1 + i, y), &groundTile_[TOP]);
+    AddTile(TilePos(left + width + 1, y), &groundTile_[TOP_RIGHT]);
     
     int j = 0;
     for (; j < height; j++)
     {
         y = -1 - j;
-        AddTile(TilePos(left, y), groundTile_[MID_LEFT]);
+        AddTile(TilePos(left, y), &groundTile_[MID_LEFT]);
         for (int i = 0; i < width; ++i)
-            AddTile(TilePos(left + 1 + i, y), groundTile_[MID]);
-        AddTile(TilePos(left + width + 1, y), groundTile_[MID_RIGHT]);
+            AddTile(TilePos(left + 1 + i, y), &groundTile_[MID]);
+        AddTile(TilePos(left + width + 1, y), &groundTile_[MID_RIGHT]);
     }
 
     y = -j - 1;
-    AddTile(TilePos(left, y), groundTile_[BOT_LEFT]);
+    AddTile(TilePos(left, y), &groundTile_[BOT_LEFT]);
     for (int i = 0; i < width; ++i)
-        AddTile(TilePos(left + 1 + i, y), groundTile_[BOT]);
-    AddTile(TilePos(left + width + 1, y), groundTile_[BOT_RIGHT]);
+        AddTile(TilePos(left + 1 + i, y), &groundTile_[BOT]);
+    AddTile(TilePos(left + width + 1, y), &groundTile_[BOT_RIGHT]);
 
-
-    if (HS_FAILED(Texture::CreateTex2D("textures/Rock1.png", "Rock01", &rockTex_[0])))
-        return R_FAIL;
-
-    if (HS_FAILED(Texture::CreateTex2D("textures/Rock2.png", "Rock02", &rockTex_[1])))
-        return R_FAIL;
-
-    Array<AnimationSegment> rockIdleSegments;
-    for (uint i = 0; i < hs_arr_len(rockTex_); ++i)
-    {
-        rockTile_[i] = new Tile();
-        rockTile_[i]->texture_ = rockTex_[i];
-        rockTile_[i]->size_ = Vec2{ 32, 32 };
-        rockTile_[i]->uvBox_ = Vec4{ 0, 0, 1, 1 };
-        rockIdleSegments.Add(AnimationSegment{ rockTile_[i], 0.5f });
-    }
-
-    AnimationState rockIdle{};
-    rockIdle.Init(rockIdleSegments);
     AddAnimatedTile(TilePos(-2, 0.5f, 1), rockIdle);
 
     return R_OK;
@@ -224,7 +237,7 @@ void Game::Update(float dTime)
         }
 
         Camera& cam = g_Render->GetCamera();
-        cam.SetPosition(Vec2{ pos.x, pos.y });
+        cam.SetPosition(Vec2{ pos.x, pos.y } + (characters_.Tiles[0]->size_ / 2.0f)); // Center the camera pos at the center of the player
         cam.UpdateMatrics();
     }
 

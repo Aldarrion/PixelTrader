@@ -11,6 +11,24 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
+uint Texture::GetWidth() const
+{
+    return size_.width;
+}
+
+//------------------------------------------------------------------------------
+uint Texture::GetHeight() const
+{
+    return size_.height;
+}
+
+//------------------------------------------------------------------------------
+uint Texture::GetDepth() const
+{
+    return size_.depth;
+}
+
+//------------------------------------------------------------------------------
 RESULT Texture::CreateTex2D(const char* file, const char* name, Texture** tex)
 {
     int texWidth, texHeight, texChannels;

@@ -26,6 +26,10 @@ public:
     VkImageView GetView() const;
     uint GetBindlessIndex() const;
 
+    uint GetWidth() const;
+    uint GetHeight() const;
+    uint GetDepth() const;
+
 private:
     VkImage         image_;
     VmaAllocation   allocation_;

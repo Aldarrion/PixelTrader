@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/Camera.h"
+#include "game/TileRenderer.h"
 
 #include "containers/Array.h"
 
@@ -12,7 +13,6 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
-struct Tile;
 class Texture;
 
 //------------------------------------------------------------------------------
@@ -89,17 +89,23 @@ private:
 
     // TODO move to texure/tile management
     Texture* groundTileTex_{};
-    Tile* groundTile_[3 * 3]{};
+    Tile groundTile_[3 * 3]{};
 
     Texture* goldChestTex_{};
-    Tile* goldChestTile_{};
+    Tile goldChestTile_{};
 
     Texture* rockTex_[2]{};
-    Tile* rockTile_[2]{};
+    Tile rockTile_[2]{};
+
+    Texture* forestTex_{};
+    Tile forestTile_{};
+
+    Texture* forestDoorTex_{};
+    Tile forestDoorTile_{};
 
     // Archetypes
     TileArchetype tiles_{};
-    AnimatedTileArchetype animatedTiles_{};
+    AnimatedTileArchetype characters_{};
 
     void AddTile(const Vec3& pos, Tile* tile);
     void AddAnimatedTile(const Vec3& pos, const AnimationState& animation);
