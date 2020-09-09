@@ -2,6 +2,7 @@
 #include "game/Game.h"
 #include "render/Render.h"
 #include "input/Input.h"
+#include "resources/ResourceManager.h"
 
 #include "common/Logging.h"
 #include "common/Types.h"
@@ -101,6 +102,20 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     // Window
     if (FAILED(InitWindow(WIDTH, HEIGHT, instance)))
         return -1;
+
+    // Resource manager
+    if (FAILED(hs::CreateResourceManager()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to create resource manager");
+        return -1;
+    }
+    hs_assert(hs::g_ResourceManager);
+
+    if (FAILED(hs::g_ResourceManager->InitWin32()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to init resource manager");
+        return -1;
+    }
 
     // Render
     if (FAILED(hs::CreateRender(WIDTH, HEIGHT)))
@@ -226,6 +241,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     hs::DestroyGame();
     hs::DestroyInput();
     hs::DestroyRender();
+    hs::DestroyResourceManager();
 
     return 0;
 }

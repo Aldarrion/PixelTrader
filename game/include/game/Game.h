@@ -87,20 +87,10 @@ private:
 
     float dTime_{};
 
-    // TODO move to texure/tile management
-    Texture* groundTileTex_{};
     Tile groundTile_[3 * 3]{};
-
-    Texture* goldChestTex_{};
     Tile goldChestTile_{};
-
-    Texture* rockTex_[2]{};
     Tile rockTile_[2]{};
-
-    Texture* forestTex_{};
     Tile forestTile_{};
-
-    Texture* forestDoorTex_{};
     Tile forestDoorTile_{};
 
     // Archetypes

@@ -3,9 +3,11 @@
 #include "Config.h"
 
 #include "containers/Array.h"
-#include "common/Enums.h"
+#include "containers/Hash.h"
 
 #include "math/hs_Math.h"
+
+#include "common/Enums.h"
 
 #include <cstdlib>
 

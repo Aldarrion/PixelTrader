@@ -8,6 +8,8 @@
 #include "render/Render.h"
 #include "render/hs_Image.h"
 
+#include "resources/ResourceManager.h"
+
 #include "input/Input.h"
 
 #include "common/Logging.h"
@@ -71,13 +73,6 @@ void DestroyGame()
 //------------------------------------------------------------------------------
 Game::~Game()
 {
-    delete groundTileTex_;
-    delete goldChestTex_;
-    delete forestTex_;
-    delete forestDoorTex_;
-
-    for (uint i = 0; i < hs_arr_len(rockTex_); ++i)
-        delete rockTex_[i];
 }
 
 //------------------------------------------------------------------------------
@@ -112,14 +107,15 @@ Vec3 TilePos(float x, float y, float z = 0)
 }
 
 //------------------------------------------------------------------------------
-RESULT MakeSimpleTile(const char* texPath, const char* name, Tile& t, Texture** tex)
+RESULT MakeSimpleTile(const char* texPath, Tile& t)
 {
-    if (HS_FAILED(Texture::CreateTex2D(texPath, name, tex)))
+    Texture* tex;
+    if (HS_FAILED(g_ResourceManager->LoadTexture2D(texPath, &tex)))
         return R_FAIL;
 
-    t.size_ = Vec2{ (float)(*tex)->GetWidth(), (float)(*tex)->GetHeight() };
+    t.size_ = Vec2{ (float)tex->GetWidth(), (float)tex->GetHeight() };
     t.uvBox_ = Vec4{ 0, 0, 1, 1 };
-    t.texture_ = *tex;
+    t.texture_ = tex;
 
     return R_OK;
 }
@@ -127,7 +123,8 @@ RESULT MakeSimpleTile(const char* texPath, const char* name, Tile& t, Texture** 
 //------------------------------------------------------------------------------
 RESULT Game::InitWin32()
 {
-    if (HS_FAILED(Texture::CreateTex2D("textures/Ground1.png", "GrassTile", &groundTileTex_)))
+    Texture* groundTileTex;
+    if (HS_FAILED(g_ResourceManager->LoadTexture2D("textures/Ground1.png", &groundTileTex)))
         return R_FAIL;
 
     constexpr float uvSize = 16.0f / (3 * 16.0f);
@@ -137,7 +134,7 @@ RESULT Game::InitWin32()
         {
             Tile t{};
 
-            t.texture_ = groundTileTex_;
+            t.texture_ = groundTileTex;
             t.uvBox_ = Vec4{ uvSize * x, uvSize * y, uvSize, uvSize };
             t.size_ = Vec2{ 16, 16 };
 
@@ -145,23 +142,23 @@ RESULT Game::InitWin32()
         }
     }
 
-    if (HS_FAILED(MakeSimpleTile("textures/GoldChest.png", "GoldChest", goldChestTile_, &goldChestTex_)))
+    if (HS_FAILED(MakeSimpleTile("textures/GoldChest.png", goldChestTile_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Forest.png", "Forest", forestTile_, &forestTex_)))
+    if (HS_FAILED(MakeSimpleTile("textures/Forest.png", forestTile_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/ForestDoor.png", "ForestDoor", forestDoorTile_, &forestDoorTex_)))
+    if (HS_FAILED(MakeSimpleTile("textures/ForestDoor.png", forestDoorTile_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Rock1.png", "Rock01", rockTile_[0], &rockTex_[0])))
+    if (HS_FAILED(MakeSimpleTile("textures/Rock1.png", rockTile_[0])))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Rock2.png", "Rock02", rockTile_[1], &rockTex_[1])))
+    if (HS_FAILED(MakeSimpleTile("textures/Rock2.png", rockTile_[1])))
         return R_FAIL;
 
     Array<AnimationSegment> rockIdleSegments;
-    for (uint i = 0; i < hs_arr_len(rockTex_); ++i)
+    for (uint i = 0; i < hs_arr_len(rockTile_); ++i)
         rockIdleSegments.Add(AnimationSegment{ &rockTile_[i], 0.5f });
 
     AnimationState rockIdle{};

@@ -4,6 +4,7 @@
 #include "common/Enums.h"
 
 #include "containers/Array.h"
+#include "containers/Hash.h"
 
 #include "render/VkTypes.h"
 #include <unordered_map>
@@ -27,6 +28,7 @@ public:
     RESULT ReloadShaders();
 
 private:
+    // TODO use custom hashmap
     std::unordered_map<const char*, Shader*, StrHash<const char*>, StrCmpEq<const char*>> cache_;
     
     Array<VkShaderModule>       toDestroy_;

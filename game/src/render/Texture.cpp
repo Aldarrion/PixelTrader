@@ -171,6 +171,7 @@ RESULT Texture::Allocate(void** data, const char* diagName)
     imgViewInfo.format              = format_;
     imgViewInfo.subresourceRange    = allSubres;
 
+    // TODO do we need to keep the image view alive when it is copied to the bindless array?
     vkCreateImageView(g_Render->GetDevice(), &imgViewInfo, nullptr, &srv_);
 
     bindlessIdx_ = g_Render->AddBindlessTexture(srv_);
@@ -181,7 +182,8 @@ RESULT Texture::Allocate(void** data, const char* diagName)
 //------------------------------------------------------------------------------
 void Texture::Free()
 {
-    // TODO release
+    vkDestroyImageView(g_Render->GetDevice(), srv_, nullptr);
+    vmaDestroyImage(g_Render->GetAllocator(), image_, allocation_);
 }
 
 }
