@@ -113,7 +113,7 @@ RESULT MakeSimpleTile(const char* texPath, Tile& t)
     if (HS_FAILED(g_ResourceManager->LoadTexture2D(texPath, &tex)))
         return R_FAIL;
 
-    t.size_ = Vec2{ (float)tex->GetWidth(), (float)tex->GetHeight() };
+    t.size_ = Vec2(tex->GetWidth(), tex->GetHeight());
     t.uvBox_ = Vec4{ 0, 0, 1, 1 };
     t.texture_ = tex;
 
@@ -173,7 +173,7 @@ RESULT Game::InitWin32()
     int width = 15;
     int height = 10;
 
-    AddTile(TilePos(left, 0.4f, 3), &forestTile_);
+    AddTile(Vec3(left * TILE_SIZE, 0.4f, 3), &forestTile_);
 
     AddTile(TilePos(left + 2, 0.3f, 2), &forestDoorTile_);
 
