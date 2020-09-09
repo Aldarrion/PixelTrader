@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="hs::Array&lt;*&gt;">
+    <DisplayString>{{ Count = {count_} }}</DisplayString>
+    <Expand>
+      <Item Name="[Count]" ExcludeView="simple">count_</Item>
+      <Item Name="[Capacity]" ExcludeView="simple">capacity_</Item>
+      <ArrayItems>
+        <Size>count_</Size>
+        <ValuePointer>items_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+</AutoVisualizer>

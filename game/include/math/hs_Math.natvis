@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="hs::Vec2">
+    <DisplayString>{{ X = {x}, Y = {y} }}</DisplayString>
+  </Type>
+  <Type Name="hs::Vec3">
+    <DisplayString>{{ X = {x}, Y = {y}, Z = {z} }}</DisplayString>
+  </Type>
+  <Type Name="hs::Vec3">
+    <DisplayString>{{ X = {x}, Y = {y}, Z = {z}, W = {w} }}</DisplayString>
+  </Type>
+</AutoVisualizer>

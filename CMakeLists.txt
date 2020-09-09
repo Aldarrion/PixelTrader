@@ -12,13 +12,14 @@ project(${PROJ_NAME})
 
 file(GLOB_RECURSE GAME_HEADERS "game/include/*.h")
 file(GLOB_RECURSE GAME_SOURCES "game/src/*.cpp")
+file(GLOB_RECURSE GAME_NATVIS "game/*.natvis")
 file(GLOB_RECURSE EXTERN_CJSON_SRC "extern/cjson/src/*.c")
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/game/include" PREFIX "Game" FILES ${GAME_HEADERS})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/game/src" PREFIX "Game" FILES ${GAME_SOURCES})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/extern/cjson/src" PREFIX "Extern/cJSON" FILES ${EXTERN_CJSON_SRC})
 
-add_executable(${PROJ_NAME} WIN32 ${GAME_SOURCES} ${GAME_HEADERS} ${EXTERN_CJSON_SRC})
+add_executable(${PROJ_NAME} WIN32 ${GAME_SOURCES} ${GAME_HEADERS} ${GAME_NATVIS} ${EXTERN_CJSON_SRC})
 
 set(VK_SDK_DIR "" CACHE PATH "Root directory of the LunarG SDK")
 
