@@ -35,7 +35,7 @@ public:
     void AddTile(Tile* tile, Vec3 position);
 
 private:
-    TileMaterial* tileMaterial_;
+    TileMaterial tileMaterial_;
     Array<TileDrawCall> drawCalls_;
 };
 

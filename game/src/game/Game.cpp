@@ -1,6 +1,7 @@
 #include "game/Game.h"
 
 #include "game/TileRenderer.h"
+#include "game/DebugShapeRenderer.h"
 
 #include "render/Texture.h"
 #include "render/VertexBuffer.h"
@@ -88,6 +89,7 @@ void Game::AddAnimatedTile(const Vec3& pos, const AnimationState& animation)
     characters_.Positions.Add(pos);
     characters_.Animations.Add(animation);
     characters_.Tiles.Add(animation.GetCurrentTile());
+    characters_.Colliders.Add(Box2D(Vec2(0, 0), animation.GetCurrentTile()->size_));
 }
 
 //------------------------------------------------------------------------------
@@ -97,6 +99,25 @@ void Game::AnimateTiles()
     {
         characters_.Animations[i].Update(dTime_);
         characters_.Tiles[i] = characters_.Animations[i].GetCurrentTile();
+    }
+}
+
+//------------------------------------------------------------------------------
+void Game::DrawColliders()
+{
+    g_Render->GetDebugShapeRenderer()->ClearShapes();
+    Vec3 verts[5];
+    for (int i = 0; i < characters_.Colliders.Count(); ++i)
+    {
+        Vec2 min = characters_.Colliders[i].min_ + characters_.Positions[i].XY();
+        Vec2 max = characters_.Colliders[i].max_ + characters_.Positions[i].XY();
+
+        verts[0] = verts[4] = Vec3(min.x, min.y, 0);
+        verts[1] = Vec3(max.x, min.y, 0);
+        verts[2] = Vec3(max.x, max.y, 0);
+        verts[3] = Vec3(min.x, max.y, 0);
+
+        g_Render->GetDebugShapeRenderer()->AddShape(verts, hs_arr_len(verts), Color(0, 1, 0, 1));
     }
 }
 
@@ -256,6 +277,8 @@ void Game::Update(float dTime)
     {
         tr->AddTile(characters_.Tiles[i], characters_.Positions[i]);
     }
+
+    DrawColliders();
 }
 
 //------------------------------------------------------------------------------

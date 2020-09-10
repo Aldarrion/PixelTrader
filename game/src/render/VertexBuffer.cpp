@@ -52,4 +52,10 @@ VkBuffer VertexBuffer::GetBuffer() const
     return buffer_;
 }
 
+//------------------------------------------------------------------------------
+void VertexBuffer::Free()
+{
+    vmaDestroyBuffer(g_Render->GetAllocator(), buffer_, allocation_);
+}
+
 }

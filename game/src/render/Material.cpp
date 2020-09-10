@@ -58,6 +58,63 @@ uint TileVertexLayout()
 }
 
 //------------------------------------------------------------------------------
+uint PosColVertLayout()
+{
+    static VkVertexInputAttributeDescription attributeDescriptions[2]{};
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    attributeDescriptions[0].offset = 0;
+
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_B8G8R8A8_UNORM;
+    attributeDescriptions[1].offset = 16;
+
+    static VkVertexInputBindingDescription bindingDescription{};
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(TileVertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = hs_arr_len(attributeDescriptions);
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
+
+    return g_Render->GetOrCreateVertexLayout(vertexInputInfo);
+}
+
+//------------------------------------------------------------------------------
+struct SceneData
+{
+    Mat44   Projection;
+    Vec4    ViewPos;
+};
+
+//------------------------------------------------------------------------------
+void SetSceneData()
+{
+    void* mapped;
+    DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
+    auto ubo = (SceneData*)mapped;
+
+    Mat44 camMat = g_Render->GetCamera().ToCamera();
+    Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
+    ubo->Projection = projMat;
+
+    g_Render->GetUBOCache()->EndAlloc();
+    g_Render->SetDynamicUbo(1, constBuffer);
+}
+
+//------------------------------------------------------------------------------
+TileMaterial::~TileMaterial()
+{
+    tilesBuffer_->Free();
+}
+
+//------------------------------------------------------------------------------
 RESULT TileMaterial::Init()
 {
     //
@@ -127,7 +184,7 @@ void TileMaterial::Draw()
         ubo->Projection = projMat;
 
         g_Render->GetUBOCache()->EndAlloc();
-        g_Render->SetDynamicUbo(1, &constBuffer);
+        g_Render->SetDynamicUbo(1, constBuffer);
     }
 
     g_Render->SetVertexLayout(0, tileVertexLayout_);
@@ -145,6 +202,7 @@ void TileMaterial::Draw()
 void TileMaterial::DrawTile(const TileDrawData& data)
 {
     {
+        // TODO get rid of this and use a proper dynamic vertex buffer
         if (vertsDrawn_ > 6000)
             vertsDrawn_ = 0;
 
@@ -207,24 +265,7 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         tilesBuffer_->Unmap();
     }
 
-    {
-        struct SceneData
-        {
-            Mat44   Projection;
-            Vec4    ViewPos;
-        };
-
-        void* mapped;
-        DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
-        auto ubo = (SceneData*)mapped;
-
-        Mat44 camMat = g_Render->GetCamera().ToCamera();
-        Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
-        ubo->Projection = projMat;
-
-        g_Render->GetUBOCache()->EndAlloc();
-        g_Render->SetDynamicUbo(1, &constBuffer);
-    }
+    SetSceneData();
 
     g_Render->SetVertexLayout(0, tileVertexLayout_);
     g_Render->SetVertexBuffer(0, tilesBuffer_, vertsDrawn_ * sizeof(TileVertex));
@@ -237,6 +278,77 @@ void TileMaterial::DrawTile(const TileDrawData& data)
     g_Render->Draw(6, 0);
     vertsDrawn_ += 6;
 }
+
+
+//------------------------------------------------------------------------------
+DebugShapeMaterial::~DebugShapeMaterial()
+{
+    shapeBuffer_->Free();
+}
+
+//------------------------------------------------------------------------------
+RESULT DebugShapeMaterial::Init()
+{
+    shapeVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Shape_vs.hlsl");
+    shapeFrag_ = g_Render->GetShaderManager()->GetOrCreateShader("Shape_fs.hlsl");
+
+    if (!shapeVert_ || !shapeFrag_)
+        return R_FAIL;
+
+    shapeBuffer_ = new VertexBuffer(1024 * 1024);
+    if (FAILED(shapeBuffer_->Init()))
+        return R_FAIL;
+
+    shapeVertexLayout_ = PosColVertLayout();
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+void DebugShapeMaterial::Draw()
+{
+}
+
+//------------------------------------------------------------------------------
+struct DebugShapeVertex
+{
+    Vec4 position_;
+    uint color_;
+    uint pad_[3];
+};
+
+//------------------------------------------------------------------------------
+void DebugShapeMaterial::DrawShape(Vec3* verts, uint vertCount, const Color& color)
+{
+    {
+        // TODO get rid of this and use a proper dynamic vertex buffer
+        if (vertsDrawn_ > 6000)
+            vertsDrawn_ = 0;
+
+        auto mapped = (DebugShapeVertex*)shapeBuffer_->Map() + vertsDrawn_;
+
+        for (uint i = 0; i < vertCount; ++i)
+        {
+            mapped[i].color_ = color.ToSrgbUint();
+            mapped[i].position_ = verts[i].ToVec4Pos();
+        }
+
+        shapeBuffer_->Unmap();
+    }
+
+    SetSceneData();
+
+    g_Render->SetVertexLayout(0, shapeVertexLayout_);
+    g_Render->SetVertexBuffer(0, shapeBuffer_, vertsDrawn_ * sizeof(DebugShapeVertex));
+
+    g_Render->SetShader<PS_VERT>(shapeVert_);
+    g_Render->SetShader<PS_FRAG>(shapeFrag_);
+    g_Render->SetPrimitiveTopology(VkrPrimitiveTopology::LINE_STRIP);
+
+    g_Render->Draw(vertCount, 0);
+    vertsDrawn_ += vertCount;
+}
+
 
 //------------------------------------------------------------------------------
 RESULT TexturedTriangleMaterial::Init()
@@ -302,54 +414,6 @@ void TexturedTriangleMaterial::Draw()
 
 
 //------------------------------------------------------------------------------
-RESULT ShapeMaterial::Init()
-{
-    shapeVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Shape_vs.hlsl");
-    shapeFrag_ = g_Render->GetShaderManager()->GetOrCreateShader("Shape_fs.hlsl");
-
-    if (!shapeVert_ || !shapeFrag_)
-        return R_FAIL;
-
-    vertexBuffer_ = new VertexBuffer(1024);
-    if (FAILED(vertexBuffer_->Init()))
-        return R_FAIL;
-
-    auto mapped = (ShapeVertex*) vertexBuffer_->Map();
-
-    mapped[0].position_.v[0] = 100;
-    mapped[0].position_.v[1] = 100;
-
-    mapped[1].position_.v[0] = 400;
-    mapped[1].position_.v[1] = 100;
-
-    mapped[2].position_.v[0] = 200;
-    mapped[2].position_.v[1] = 400;
-
-    mapped[0].color_ = 
-    mapped[1].color_ = 
-    mapped[2].color_ = 0xffff3333;
-
-    vertexBuffer_->Unmap();
-
-    vertexLayout_ = ShapeVertexLayout();
-
-    return R_OK;
-}
-
-//------------------------------------------------------------------------------
-void ShapeMaterial::Draw()
-{
-    g_Render->SetVertexLayout(0, vertexLayout_);
-
-    g_Render->SetShader<PS_VERT>(shapeVert_);
-    g_Render->SetShader<PS_FRAG>(shapeFrag_);
-
-    g_Render->SetVertexBuffer(0, vertexBuffer_, 0);
-
-    g_Render->Draw(3, 0);
-}
-
-//------------------------------------------------------------------------------
 RESULT PhongMaterial::Init()
 {
     phongVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Phong_vs.hlsl");
@@ -380,7 +444,7 @@ void PhongMaterial::Draw()
     
     g_Render->GetUBOCache()->EndAlloc();
 
-    g_Render->SetDynamicUbo(1, &constBuffer);
+    g_Render->SetDynamicUbo(1, constBuffer);
 
 
     // This material setup
@@ -447,7 +511,7 @@ void SkyboxMaterial::Draw()
 
     g_Render->GetUBOCache()->EndAlloc();
 
-    g_Render->SetDynamicUbo(1, &constBuffer);
+    g_Render->SetDynamicUbo(1, constBuffer);
 
 
     // This material setup

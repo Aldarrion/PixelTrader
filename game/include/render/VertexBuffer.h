@@ -17,6 +17,8 @@ public:
     void* Map();
     void Unmap();
 
+    void Free();
+
 private:
     VkBuffer        buffer_;
     VmaAllocation   allocation_;

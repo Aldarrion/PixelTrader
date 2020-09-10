@@ -10,9 +10,7 @@ namespace hs
 //------------------------------------------------------------------------------
 RESULT TileRenderer::Init()
 {
-    tileMaterial_ = new TileMaterial();
-
-    if (HS_FAILED(tileMaterial_->Init()))
+    if (HS_FAILED(tileMaterial_.Init()))
     {
         Log(LogLevel::Error, "Failed to init material");
         return R_FAIL;
@@ -55,13 +53,15 @@ int TileDrawCallCmp(const void *a, const void *b)
 //------------------------------------------------------------------------------
 void TileRenderer::Draw()
 {
+    g_Render->ResetState();
+
     // TODO improve drawing and add batching
     qsort(drawCalls_.Data(), drawCalls_.Count(), sizeof(TileDrawCall), &TileDrawCallCmp);
 
     //Log(LogLevel::Info, "Tile draw calls: %d", drawCalls_.Count());
     for (int i = 0, count = drawCalls_.Count(); i < count; ++i)
     {
-        tileMaterial_->DrawTile(TileDrawData{
+        tileMaterial_.DrawTile(TileDrawData{
             drawCalls_[i].tile_->texture_,
             drawCalls_[i].tile_->uvBox_,
             drawCalls_[i].tile_->size_,

@@ -11,6 +11,7 @@
 
 #include "game/DrawCanvas.h"
 #include "game/TileRenderer.h"
+#include "game/DebugShapeRenderer.h"
 
 #include "game/Serialization.h"
 #include "input/Input.h"
@@ -905,6 +906,10 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     if (tileRenderer_ && HS_FAILED(tileRenderer_->Init()))
         return R_FAIL;
 
+    debugShapeRenderer_ = new DebugShapeRenderer();
+    if (debugShapeRenderer_ && HS_FAILED(debugShapeRenderer_->Init()))
+        return R_FAIL;
+
     state_.Reset();
 
     return R_OK;
@@ -1111,13 +1116,13 @@ RESULT Render::PrepareForDraw()
 
     uint writeCount = 1;
 
-    if (state_.dynamicUBOs_[0])
+    if (state_.dynamicUBOs_[0].buffer_)
     {
-        buffInfo[1].buffer = state_.dynamicUBOs_[0]->buffer_;
+        buffInfo[1].buffer = state_.dynamicUBOs_[0].buffer_;
         buffInfo[1].offset = 0;
-        buffInfo[1].range  = state_.dynamicUBOs_[0]->size_;
+        buffInfo[1].range  = state_.dynamicUBOs_[0].size_;
 
-        dynOffsets[1] = state_.dynamicUBOs_[0]->dynOffset_;
+        dynOffsets[1] = state_.dynamicUBOs_[0].dynOffset_;
 
         ++writeCount;
         UBOWrites[1].sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1286,6 +1291,9 @@ void Render::Update(float dTime)
     if (tileRenderer_)
         tileRenderer_->Draw();
 
+    if (debugShapeRenderer_)
+        debugShapeRenderer_->Draw();
+
     //-------------------
     // Submit and Present
 
@@ -1400,6 +1408,12 @@ float Render::GetAspect() const
 }
 
 //------------------------------------------------------------------------------
+void Render::ResetState()
+{
+    state_.Reset();
+}
+
+//------------------------------------------------------------------------------
 void Render::SetTexture(uint slot, Texture* texture)
 {
     uint texIdx = texture->GetBindlessIndex();
@@ -1432,7 +1446,7 @@ void Render::SetVertexLayout(uint slot, uint layoutHandle)
 }
 
 //------------------------------------------------------------------------------
-void Render::SetDynamicUbo(uint slot, DynamicUBOEntry* entry)
+void Render::SetDynamicUbo(uint slot, const DynamicUBOEntry& entry)
 {
     hs_assert(slot < DYNAMIC_UBO_COUNT + 1);
 
@@ -1498,7 +1512,7 @@ uint Render::GetOrCreateVertexLayout(VkPipelineVertexInputStateCreateInfo info)
 {
     for (int i = 0; i < vertexLayouts_.Count(); ++i)
     {
-        if (memcmp(&vertexLayouts_[i], &info, sizeof(VkPipelineVertexInputStateCreateInfo)))
+        if (memcmp(&vertexLayouts_[i], &info, sizeof(VkPipelineVertexInputStateCreateInfo)) == 0)
             return i;
     }
 
@@ -1522,6 +1536,12 @@ Camera& Render::GetCamera()
 TileRenderer* Render::GetTileRenderer() const
 {
     return tileRenderer_;
+}
+
+//------------------------------------------------------------------------------
+DebugShapeRenderer* Render::GetDebugShapeRenderer() const
+{
+    return debugShapeRenderer_;
 }
 
 }

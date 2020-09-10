@@ -49,11 +49,12 @@ struct TileArchetype
 };
 
 //------------------------------------------------------------------------------
-struct AnimatedTileArchetype
+struct CharacterArchetype
 {
     Array<Vec3> Positions;
     Array<Tile*> Tiles;
     Array<AnimationState> Animations;
+    Array<Box2D> Colliders;
 };
 
 //------------------------------------------------------------------------------
@@ -95,11 +96,12 @@ private:
 
     // Archetypes
     TileArchetype tiles_{};
-    AnimatedTileArchetype characters_{};
+    CharacterArchetype characters_{};
 
     void AddTile(const Vec3& pos, Tile* tile);
     void AddAnimatedTile(const Vec3& pos, const AnimationState& animation);
     void AnimateTiles();
+    void DrawColliders();
 };
 
 }

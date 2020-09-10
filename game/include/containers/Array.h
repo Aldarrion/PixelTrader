@@ -189,6 +189,21 @@ public:
     }
 
     //------------------------------------------------------------------------------
+    void Reserve(size_t capacity)
+    {
+        if (capacity <= capacity_)
+            return;
+
+        auto oldCapacity = capacity_;
+        capacity_ = hs_max(capacity, MIN_CAPACITY);
+            
+        T* newItems = (T*)malloc(sizeof(T) * capacity_);
+        memcpy(newItems, items_, sizeof(T) * oldCapacity);
+        free(items_);
+        items_ = newItems;
+    }
+
+    //------------------------------------------------------------------------------
     const T& Last()
     {
         hs_assert(count_);

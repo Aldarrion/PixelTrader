@@ -56,6 +56,7 @@ struct DynamicUBOEntry;
 
 class DrawCanvas;
 class TileRenderer;
+class DebugShapeRenderer;
 
 class SerializationManager;
 
@@ -76,7 +77,7 @@ struct RenderState
 
     Shader*                 shaders_[PS_COUNT]{};
     uint                    fsTextures_[SRV_SLOT_COUNT]{};
-    DynamicUBOEntry*        dynamicUBOs_[DYNAMIC_UBO_COUNT]{};
+    DynamicUBOEntry         dynamicUBOs_[DYNAMIC_UBO_COUNT]{};
 
     DynamicUBOEntry         bindlessUBO_{};
 
@@ -115,7 +116,7 @@ public:
     void SetVertexBuffer(uint slot, VertexBuffer* buffer, uint offset);
     void SetVertexLayout(uint slot, uint layoutHandle);
     void SetPrimitiveTopology(VkrPrimitiveTopology primitiveTopology);
-    void SetDynamicUbo(uint slot, DynamicUBOEntry* entry);
+    void SetDynamicUbo(uint slot, const DynamicUBOEntry& entry);
     void SetDepthState(uint state);
 
     // Drawing
@@ -148,6 +149,8 @@ public:
     uint GetHeight() const;
     float GetAspect() const;
 
+    void ResetState();
+
     //----------------------
     // Vertex layout manager
     uint GetOrCreateVertexLayout(VkPipelineVertexInputStateCreateInfo info);
@@ -159,6 +162,9 @@ public:
 
     // Tile renderer
     TileRenderer* GetTileRenderer() const;
+
+    // Debug shape renderer
+    DebugShapeRenderer* GetDebugShapeRenderer() const;
 
 private:
     static constexpr auto VK_VERSION = VK_API_VERSION_1_1;
@@ -260,6 +266,7 @@ private:
     DrawCanvas* drawCanvas_{};
 
     TileRenderer* tileRenderer_{};
+    DebugShapeRenderer* debugShapeRenderer_{};
 
     //----------------------
     // Vertex layout manager

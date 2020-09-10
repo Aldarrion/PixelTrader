@@ -30,6 +30,8 @@ struct TileDrawData
 class TileMaterial : public Material
 {
 public:
+    ~TileMaterial();
+
     RESULT Init() override;
     void Draw() override;
     void DrawTile(const TileDrawData& data);
@@ -39,6 +41,24 @@ private:
     Shader*         tileFrag_{};
     VertexBuffer*   tilesBuffer_{};
     uint            tileVertexLayout_{};
+    uint            vertsDrawn_{};
+};
+
+//------------------------------------------------------------------------------
+class DebugShapeMaterial : public Material
+{
+public:
+    ~DebugShapeMaterial();
+
+    RESULT Init() override;
+    void Draw() override;
+    void DrawShape(Vec3* verts, uint vertCount, const Color& color);
+
+private:
+    Shader*         shapeVert_{};
+    Shader*         shapeFrag_{};
+    VertexBuffer*   shapeBuffer_{};
+    uint            shapeVertexLayout_{};
     uint            vertsDrawn_{};
 };
 
@@ -57,20 +77,6 @@ private:
     Texture*    textureBox_{};
 };
 
-
-//------------------------------------------------------------------------------
-class ShapeMaterial : public Material
-{
-public:
-    RESULT Init() override;
-    void Draw() override;
-
-private:
-    Shader*         shapeVert_{};
-    Shader*         shapeFrag_{};
-    VertexBuffer*   vertexBuffer_{};
-    uint            vertexLayout_{};
-};
 
 //------------------------------------------------------------------------------
 class PhongMaterial : public Material
