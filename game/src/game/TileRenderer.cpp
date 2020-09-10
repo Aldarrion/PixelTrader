@@ -1,5 +1,7 @@
 #include "game/TileRenderer.h"
 
+#include "render/Render.h"
+
 #include "common/Logging.h"
 
 namespace hs
@@ -28,6 +30,12 @@ void TileRenderer::ClearTiles()
 //------------------------------------------------------------------------------
 void TileRenderer::AddTile(Tile* tile, Vec3 position)
 {
+    const Box2D tileBoundBox(Vec2(position.x, position.y), Vec2(position.x + tile->size_.x, position.y + tile->size_.y));
+    const Box2D frustum = g_Render->GetCamera().GetOrthoFrustum();
+
+    if (!IsIntersecting(tileBoundBox, frustum))
+        return;
+
     drawCalls_.Add(TileDrawCall{ tile, position });
 }
 

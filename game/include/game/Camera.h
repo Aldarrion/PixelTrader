@@ -32,6 +32,8 @@ public:
     void Update();
     void UpdateMatrics();
 
+    Box2D GetOrthoFrustum() const;
+
 private:
     Mat44 toCamera_;
     Mat44 projection_;

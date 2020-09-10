@@ -562,4 +562,30 @@ public:
     }
 };
 
+//------------------------------------------------------------------------------
+struct Box2D
+{
+    Vec2 min_;
+    Vec2 max_;
+
+    Box2D() = default;
+    Box2D(Vec2 min, Vec2 max)
+        : min_(min)
+        , max_(max)
+    {
+    }
+};
+
+//------------------------------------------------------------------------------
+inline bool IsIntersecting(const Box2D& a, const Box2D& b)
+{
+    if (a.max_.x < b.min_.x || a.min_.x > b.max_.x) 
+        return false;
+    if (a.max_.y < b.min_.y || a.min_.y > b.max_.y)
+        return false;
+
+    return true;
+}
+
+
 }
