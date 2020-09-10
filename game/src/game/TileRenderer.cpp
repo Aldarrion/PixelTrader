@@ -58,6 +58,7 @@ void TileRenderer::Draw()
     // TODO improve drawing and add batching
     qsort(drawCalls_.Data(), drawCalls_.Count(), sizeof(TileDrawCall), &TileDrawCallCmp);
 
+    //Log(LogLevel::Info, "Tile draw calls: %d", drawCalls_.Count());
     for (int i = 0, count = drawCalls_.Count(); i < count; ++i)
     {
         tileMaterial_->DrawTile(TileDrawData{
