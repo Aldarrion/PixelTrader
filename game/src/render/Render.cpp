@@ -923,13 +923,60 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 //------------------------------------------------------------------------------
 void Render::Free()
 {
-    FlushGpu(true);
+    FlushGpu<false, true>();
 }
 
 //------------------------------------------------------------------------------
-void Render::FlushGpu(bool wait)
+template<bool present, bool wait>
+void Render::FlushGpu()
 {
-    // TODO implement
+    vkEndCommandBuffer(directCmdBuffers_[currentBBIdx_]);
+
+    VkSubmitInfo submit{};
+    submit.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit.commandBufferCount   = 1;
+    submit.pCommandBuffers      = &directCmdBuffers_[currentBBIdx_];
+    submit.signalSemaphoreCount = 1;
+    submit.pSignalSemaphores    = &submitSemaphores_[currentBBIdx_];
+
+    VKR_CHECK(vkQueueSubmit(vkDirectQueue_, 1, &submit, directQueueFences_[currentBBIdx_]));
+
+    if (present)
+    {
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType               = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.swapchainCount      = 1;
+        presentInfo.pSwapchains         = &vkSwapchain_;
+        presentInfo.pImageIndices       = &currentBBIdx_;
+        presentInfo.waitSemaphoreCount  = 1;
+        presentInfo.pWaitSemaphores     = &submitSemaphores_[currentBBIdx_];
+
+        VKR_CHECK(vkQueuePresentKHR(vkDirectQueue_, &presentInfo));
+
+        VKR_CHECK(vkAcquireNextImageKHR(vkDevice_, vkSwapchain_, (uint64)-1, nullptr, nextImageFence_, &currentBBIdx_));
+    }
+
+    if (wait)
+    {
+        if (present)
+        {
+            WaitForFence(nextImageFence_);
+        }
+        WaitForFence(directQueueFences_[currentBBIdx_]);
+    }
+
+    vkResetDescriptorPool(vkDevice_, dynamicUBODPool_[currentBBIdx_], 0);
+
+    // Reset kept alive objects
+    for (int i = 0; i < destroyPipelines_[currentBBIdx_].Count(); ++i)
+        vkDestroyPipeline(vkDevice_, destroyPipelines_[currentBBIdx_][i], nullptr);
+    destroyPipelines_[currentBBIdx_].Clear();
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
 }
 
 //------------------------------------------------------------------------------
@@ -1292,10 +1339,11 @@ void Render::Update(float dTime)
     renderPassBeginInfo.clearValueCount = hs_arr_len(clearVal);
     renderPassBeginInfo.pClearValues    = clearVal;
 
-    vkCmdBeginRenderPass(directCmdBuffers_[currentBBIdx_], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     // Before frame start
     //-------------------
+
+    vkCmdBeginRenderPass(directCmdBuffers_[currentBBIdx_], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     for (int i = 0; i < materials_.Count(); ++i)
     {
@@ -1311,49 +1359,12 @@ void Render::Update(float dTime)
     if (debugShapeRenderer_)
         debugShapeRenderer_->Draw();
 
+    vkCmdEndRenderPass(directCmdBuffers_[currentBBIdx_]);
+
     //-------------------
     // Submit and Present
 
-    vkCmdEndRenderPass(directCmdBuffers_[currentBBIdx_]);
-
-    vkEndCommandBuffer(directCmdBuffers_[currentBBIdx_]);
-
-    VkSubmitInfo submit{};
-    submit.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit.commandBufferCount   = 1;
-    submit.pCommandBuffers      = &directCmdBuffers_[currentBBIdx_];
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores    = &submitSemaphores_[currentBBIdx_];
-
-    VKR_CHECK(vkQueueSubmit(vkDirectQueue_, 1, &submit, directQueueFences_[currentBBIdx_]));
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType               = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.swapchainCount      = 1;
-    presentInfo.pSwapchains         = &vkSwapchain_;
-    presentInfo.pImageIndices       = &currentBBIdx_;
-    presentInfo.waitSemaphoreCount  = 1;
-    presentInfo.pWaitSemaphores     = &submitSemaphores_[currentBBIdx_];
-
-    VKR_CHECK(vkQueuePresentKHR(vkDirectQueue_, &presentInfo));
-
-    VKR_CHECK(vkAcquireNextImageKHR(vkDevice_, vkSwapchain_, (uint64)-1, nullptr, nextImageFence_, &currentBBIdx_));
-
-    WaitForFence(nextImageFence_);
-    WaitForFence(directQueueFences_[currentBBIdx_]);
-
-    vkResetDescriptorPool(vkDevice_, dynamicUBODPool_[currentBBIdx_], 0);
-
-    // Reset kept alive objects
-    for (int i = 0; i < destroyPipelines_[currentBBIdx_].Count(); ++i)
-        vkDestroyPipeline(vkDevice_, destroyPipelines_[currentBBIdx_][i], nullptr);
-    destroyPipelines_[currentBBIdx_].Clear();
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
+    FlushGpu<true, true>();
 
     ++frame_;
 }

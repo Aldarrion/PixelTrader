@@ -79,6 +79,7 @@ VertexBufferCache::~VertexBufferCache()
 {
     for (int i = 0; i < entries_.Count(); ++i)
         entries_[i].buffer_.Free();
+    entries_.Clear();
 }
 
 //------------------------------------------------------------------------------
@@ -90,7 +91,8 @@ VertexBufferEntry VertexBufferCache::BeginAlloc(uint size, uint align, void** da
     {
         if (entries_.Last().safeToUseFrame_ <= g_Render->GetCurrentFrame())
         {
-            entries_.Insert(0, entries_.Last());
+            auto last = entries_.Last();
+            entries_.Insert(0, last);
             entries_.RemoveLast();
             entries_.First().begin_ = 0;
         }

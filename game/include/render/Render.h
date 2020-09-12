@@ -288,7 +288,9 @@ private:
     RESULT WaitForFence(VkFence fence);
 
     void Free();
-    void FlushGpu(bool wait);
+
+    template<bool present, bool wait>
+    void FlushGpu();
 
     //----------------------
     // Serialization

@@ -50,6 +50,20 @@ RESULT ShaderManager::Init()
 }
 
 //------------------------------------------------------------------------------
+ShaderManager::~ShaderManager()
+{
+    shaderc_compiler_release(shadercCompiler_);
+    shaderc_compile_options_release(opts_);
+
+    for (const auto it : cache_)
+        vkDestroyShaderModule(g_Render->GetDevice(), it.second->vkShader_, nullptr);
+    cache_.clear();
+
+    for (int i = 0; i < toDestroy_.Count(); ++i)
+        vkDestroyShaderModule(g_Render->GetDevice(), toDestroy_[i], nullptr);
+}
+
+//------------------------------------------------------------------------------
 RESULT ShaderManager::CompileShader(const char* file, PipelineStage type, Shader& shader) const
 {
     Log(LogLevel::Info, "---- Compiling shader %s ----", file);

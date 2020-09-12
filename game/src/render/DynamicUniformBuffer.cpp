@@ -97,7 +97,8 @@ DynamicUBOEntry DynamicUBOCache::BeginAlloc(uint size, void** data)
     {
         if (entries_.Last().safeToUseFrame_ <= g_Render->GetCurrentFrame())
         {
-            entries_.Insert(0, entries_.Last());
+            auto last = entries_.Last(); 
+            entries_.Insert(0, last);
             entries_.RemoveLast();
             entries_.First().begin_ = 0;
         }

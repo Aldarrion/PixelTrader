@@ -23,6 +23,7 @@ class ShaderManager
 {
 public:
     RESULT Init();
+    ~ShaderManager();
 
     Shader* GetOrCreateShader(const char* name);
     RESULT ReloadShaders();
