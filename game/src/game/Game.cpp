@@ -20,6 +20,13 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
+Game* g_Game{};
+
+//------------------------------------------------------------------------------
+static constexpr int TILE_SIZE = 16;
+
+
+//------------------------------------------------------------------------------
 RESULT AnimationState::Init(const Array<AnimationSegment>& segments)
 {
     if (segments.IsEmpty())
@@ -50,11 +57,6 @@ Tile* AnimationState::GetCurrentTile() const
     return segments_[currentSegment_].tile_;
 }
 
-//------------------------------------------------------------------------------
-Game* g_Game{};
-
-//------------------------------------------------------------------------------
-static constexpr int TILE_SIZE = 16;
 
 //------------------------------------------------------------------------------
 RESULT CreateGame()
@@ -72,9 +74,7 @@ void DestroyGame()
 }
 
 //------------------------------------------------------------------------------
-Game::~Game()
-{
-}
+Game::~Game() = default;
 
 //------------------------------------------------------------------------------
 void Game::AddTile(const Vec3& pos, Tile* tile)
@@ -103,6 +103,9 @@ void Game::AnimateTiles()
 }
 
 //------------------------------------------------------------------------------
+static constexpr Color COLLIDER_COLOR = Color(0, 1, 0, 1);
+
+//------------------------------------------------------------------------------
 void Game::DrawColliders()
 {
     g_Render->GetDebugShapeRenderer()->ClearShapes();
@@ -117,7 +120,7 @@ void Game::DrawColliders()
         verts[2] = Vec3(max.x, max.y, 0);
         verts[3] = Vec3(min.x, max.y, 0);
 
-        g_Render->GetDebugShapeRenderer()->AddShape(MakeSpan(verts), Color(0, 1, 0, 1));
+        g_Render->GetDebugShapeRenderer()->AddShape(MakeSpan(verts), COLLIDER_COLOR);
     }
 }
 

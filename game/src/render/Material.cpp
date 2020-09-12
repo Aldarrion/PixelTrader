@@ -137,10 +137,6 @@ void TileMaterial::Draw()
 void TileMaterial::DrawTile(const TileDrawData& data)
 {
     {
-        // TODO get rid of this and use a proper dynamic vertex buffer
-        if (vertsDrawn_ > 6000)
-            vertsDrawn_ = 0;
-
         TileVertex* mapped{};
         VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(6 * sizeof(TileVertex), sizeof(TileVertex), (void**)&mapped);
 
@@ -213,7 +209,6 @@ void TileMaterial::DrawTile(const TileDrawData& data)
     g_Render->SetShader<PS_FRAG>(tileFrag_);
 
     g_Render->Draw(6, 0);
-    vertsDrawn_ += 6;
 }
 
 
@@ -252,10 +247,6 @@ struct DebugShapeVertex
 void DebugShapeMaterial::DrawShape(Span<const Vec3> verts, const Color& color)
 {
     {
-        // TODO get rid of this and use a proper dynamic vertex buffer
-        if (vertsDrawn_ > 6000)
-            vertsDrawn_ = 0;
-
         DebugShapeVertex* mapped{};
         VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(verts.Count() * sizeof(DebugShapeVertex), sizeof(DebugShapeVertex), (void**)&mapped);
 
@@ -278,7 +269,6 @@ void DebugShapeMaterial::DrawShape(Span<const Vec3> verts, const Color& color)
     g_Render->SetPrimitiveTopology(VkrPrimitiveTopology::LINE_STRIP);
 
     g_Render->Draw(verts.Count(), 0);
-    vertsDrawn_ += verts.Count();
 }
 
 

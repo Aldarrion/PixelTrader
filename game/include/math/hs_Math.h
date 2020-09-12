@@ -567,22 +567,32 @@ public:
         };
     };
 
-    static Color ToLinear(const Color& srgb)
+    //------------------------------------------------------------------------------
+    static constexpr Color ToLinear(const Color& srgb)
     {
         return Color{ ::hs::ToLinear(srgb.r), ::hs::ToLinear(srgb.g), ::hs::ToLinear(srgb.b), srgb.a };
     }
 
-    static Color ToSrgb(const Color& linear)
+    //------------------------------------------------------------------------------
+    static constexpr Color ToSrgb(const Color& linear)
     {
         return Color{ ::hs::ToSrgb(linear.r), ::hs::ToSrgb(linear.g), ::hs::ToSrgb(linear.b), linear.a };
     }
 
+    //------------------------------------------------------------------------------
+    static constexpr Color FromSrgb(byte r, byte g, byte b, byte a)
+    {
+        return ToLinear(Color(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
+    }
+
+    //------------------------------------------------------------------------------
     Color() = default;
-    Color(float r, float g, float b, float a)
+    constexpr Color(float r, float g, float b, float a)
         : r(r), g(g), b(b), a(a)
     {}
 
-    uint ToSrgbUint() const
+    //------------------------------------------------------------------------------
+    constexpr uint ToSrgbUint() const
     {
         const Color srgb = ToSrgb(*this);
         const uint col =
@@ -610,7 +620,7 @@ struct Box2D
 };
 
 //------------------------------------------------------------------------------
-inline bool IsIntersecting(const Box2D& a, const Box2D& b)
+constexpr inline bool IsIntersecting(const Box2D& a, const Box2D& b)
 {
     if (a.max_.x < b.min_.x || a.min_.x > b.max_.x) 
         return false;

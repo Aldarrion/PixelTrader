@@ -43,7 +43,6 @@ private:
     Shader* tileVert_{};
     Shader* tileFrag_{};
     uint    tileVertexLayout_{};
-    uint    vertsDrawn_{};
 };
 
 //------------------------------------------------------------------------------
@@ -60,7 +59,6 @@ private:
     Shader* shapeVert_{};
     Shader* shapeFrag_{};
     uint    shapeVertexLayout_{};
-    uint    vertsDrawn_{};
 };
 
 

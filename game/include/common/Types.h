@@ -8,6 +8,8 @@ using uint16    = uint16_t;
 using uint      = uint32_t;
 using uint64    = uint64_t;
 
+using byte      = uint8;
+
 namespace hs
 {
 class Texture;
