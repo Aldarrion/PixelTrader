@@ -1,6 +1,5 @@
 #include "render/Render.h"
 
-#include "common/Logging.h"
 #include "render/Allocator.h"
 #include "render/Shader.h"
 #include "render/Material.h"
@@ -8,6 +7,7 @@
 #include "render/ShaderManager.h"
 #include "render/VertexBuffer.h"
 #include "render/DynamicUniformBuffer.h"
+#include "render/hs_Vulkan.h"
 
 #include "game/DrawCanvas.h"
 #include "game/TileRenderer.h"
@@ -16,8 +16,8 @@
 #include "game/Serialization.h"
 #include "input/Input.h"
 
+#include "common/Logging.h"
 #include "common/hs_Assert.h"
-#include "render/hs_Vulkan.h"
 
 #include "vulkan/vulkan_win32.h"
 
@@ -175,6 +175,7 @@ RESULT CreateRender(uint width, uint height)
 //------------------------------------------------------------------------------
 void DestroyRender()
 {
+    g_Render->Free();
     delete g_Render;
 }
 
@@ -856,9 +857,13 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     }
 
     //-----------------------
-    // UBO cache
-    uboCache_ = new DynamicUBOCache();
+    // Caches
+    uboCache_ = MakeUnique<DynamicUBOCache>();
     if (FAILED(uboCache_->Init()))
+        return R_FAIL;
+
+    vbCache_ = MakeUnique<VertexBufferCache>();
+    if (FAILED(vbCache_->Init()))
         return R_FAIL;
 
     //-----------------------
@@ -913,6 +918,18 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     state_.Reset();
 
     return R_OK;
+}
+
+//------------------------------------------------------------------------------
+void Render::Free()
+{
+    FlushGpu(true);
+}
+
+//------------------------------------------------------------------------------
+void Render::FlushGpu(bool wait)
+{
+    // TODO implement
 }
 
 //------------------------------------------------------------------------------
@@ -1384,9 +1401,15 @@ const VkPhysicalDeviceProperties& Render::GetPhysDevProps() const
 }
 
 //------------------------------------------------------------------------------
-DynamicUBOCache* Render::GetUBOCache()
+DynamicUBOCache* Render::GetUBOCache() const
 {
-    return uboCache_;
+    return uboCache_.Get();
+}
+
+//------------------------------------------------------------------------------
+VertexBufferCache* Render::GetVertexCache() const
+{
+    return vbCache_.Get();
 }
 
 //------------------------------------------------------------------------------
@@ -1425,12 +1448,12 @@ void Render::SetTexture(uint slot, Texture* texture)
 }
 
 //------------------------------------------------------------------------------
-void Render::SetVertexBuffer(uint slot, VertexBuffer* buffer, uint offset)
+void Render::SetVertexBuffer(uint slot, const VertexBufferEntry& entry)
 {
     hs_assert(slot < RenderState::MAX_VERT_BUFF);
 
-    state_.vertexBuffers_[slot] = buffer->GetBuffer();
-    state_.vbOffsets_[slot] = offset;
+    state_.vertexBuffers_[slot] = entry.buffer_;
+    state_.vbOffsets_[slot] = entry.offset_;
 }
 
 //------------------------------------------------------------------------------

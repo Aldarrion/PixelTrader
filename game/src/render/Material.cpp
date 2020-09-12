@@ -109,10 +109,7 @@ void SetSceneData()
 }
 
 //------------------------------------------------------------------------------
-TileMaterial::~TileMaterial()
-{
-    tilesBuffer_->Free();
-}
+TileMaterial::~TileMaterial() = default;
 
 //------------------------------------------------------------------------------
 RESULT TileMaterial::Init()
@@ -125,10 +122,6 @@ RESULT TileMaterial::Init()
         return R_FAIL;
 
     //
-    tilesBuffer_ = MakeUnique<VertexBuffer>(1024 * 1024);
-    if (FAILED(tilesBuffer_->Init()))
-        return R_FAIL;
-
     tileVertexLayout_ = TileVertexLayout();
 
     return R_OK;
@@ -148,7 +141,8 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         if (vertsDrawn_ > 6000)
             vertsDrawn_ = 0;
 
-        auto mapped = (TileVertex*)tilesBuffer_->Map() + vertsDrawn_;
+        TileVertex* mapped{};
+        VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(6 * sizeof(TileVertex), sizeof(TileVertex), (void**)&mapped);
 
         mapped[0].position_ = Vec4{
             data.pos_.x,
@@ -204,13 +198,14 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         mapped[5].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y };
         mapped[5].color_ = 0xffffffff;
 
-        tilesBuffer_->Unmap();
+        g_Render->GetVertexCache()->EndAlloc();
+        
+        g_Render->SetVertexBuffer(0, vbEntry);
     }
 
     SetSceneData();
 
     g_Render->SetVertexLayout(0, tileVertexLayout_);
-    g_Render->SetVertexBuffer(0, tilesBuffer_.Get(), vertsDrawn_ * sizeof(TileVertex));
     
     g_Render->SetTexture(0, data.texture_);
 
@@ -223,10 +218,7 @@ void TileMaterial::DrawTile(const TileDrawData& data)
 
 
 //------------------------------------------------------------------------------
-DebugShapeMaterial::~DebugShapeMaterial()
-{
-    shapeBuffer_->Free();
-}
+DebugShapeMaterial::~DebugShapeMaterial() = default;
 
 //------------------------------------------------------------------------------
 RESULT DebugShapeMaterial::Init()
@@ -235,10 +227,6 @@ RESULT DebugShapeMaterial::Init()
     shapeFrag_ = g_Render->GetShaderManager()->GetOrCreateShader("Shape_fs.hlsl");
 
     if (!shapeVert_ || !shapeFrag_)
-        return R_FAIL;
-
-    shapeBuffer_ = MakeUnique<VertexBuffer>(1024 * 1024);
-    if (FAILED(shapeBuffer_->Init()))
         return R_FAIL;
 
     shapeVertexLayout_ = PosColVertLayout();
@@ -268,7 +256,8 @@ void DebugShapeMaterial::DrawShape(Span<const Vec3> verts, const Color& color)
         if (vertsDrawn_ > 6000)
             vertsDrawn_ = 0;
 
-        auto mapped = (DebugShapeVertex*)shapeBuffer_->Map() + vertsDrawn_;
+        DebugShapeVertex* mapped{};
+        VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(verts.Count() * sizeof(DebugShapeVertex), sizeof(DebugShapeVertex), (void**)&mapped);
 
         for (uint i = 0; i < verts.Count(); ++i)
         {
@@ -276,13 +265,13 @@ void DebugShapeMaterial::DrawShape(Span<const Vec3> verts, const Color& color)
             mapped[i].position_ = verts[i].ToVec4Pos();
         }
 
-        shapeBuffer_->Unmap();
+        g_Render->GetVertexCache()->EndAlloc();
+        g_Render->SetVertexBuffer(0, vbEntry);
     }
 
     SetSceneData();
 
     g_Render->SetVertexLayout(0, shapeVertexLayout_);
-    g_Render->SetVertexBuffer(0, shapeBuffer_.Get(), vertsDrawn_ * sizeof(DebugShapeVertex));
 
     g_Render->SetShader<PS_VERT>(shapeVert_);
     g_Render->SetShader<PS_FRAG>(shapeFrag_);

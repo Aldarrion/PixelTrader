@@ -32,6 +32,13 @@ RESULT DynamicUniformBuffer::Init()
 }
 
 //------------------------------------------------------------------------------
+void DynamicUniformBuffer::Free()
+{
+    if (buffer_ && allocation_)
+        vmaDestroyBuffer(g_Render->GetAllocator(), buffer_, allocation_);
+}
+
+//------------------------------------------------------------------------------
 void* DynamicUniformBuffer::Map()
 {
     void* mapped{};
@@ -63,9 +70,18 @@ uint DynamicUniformBuffer::GetSize() const
 RESULT DynamicUBOCache::Init()
 {
     entries_.Add(CacheEntry());
-    auto res = entries_[0].buffer_.Init();
+    auto res = entries_.First().buffer_.Init();
 
     return res;
+}
+
+//------------------------------------------------------------------------------
+DynamicUBOCache::~DynamicUBOCache()
+{
+    for (int i = 0; i < entries_.Count(); ++i)
+    {
+        entries_[i].buffer_.Free();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -75,32 +91,32 @@ DynamicUBOEntry DynamicUBOCache::BeginAlloc(uint size, void** data)
     hs_assert(minUboAlignment > 0);
     size = Max(size, minUboAlignment);
 
-    entries_[0].begin_ = Align(entries_[0].begin_, size);
+    entries_.First().begin_ = Align(entries_.First().begin_, size);
 
-    if (BUFFER_SIZE - entries_[0].begin_ < size)
+    if (BUFFER_SIZE - entries_.First().begin_ < size)
     {
-        if (entries_.Last().safeFrame_ <= g_Render->GetCurrentFrame())
+        if (entries_.Last().safeToUseFrame_ <= g_Render->GetCurrentFrame())
         {
             entries_.Insert(0, entries_.Last());
-            entries_.Remove(entries_.Count() - 1);
-            entries_[0].begin_ = 0;
+            entries_.RemoveLast();
+            entries_.First().begin_ = 0;
         }
         else
         {
             entries_.Insert(0, CacheEntry());
-            entries_[0].buffer_.Init();
+            entries_.First().buffer_.Init();
         }
     }
 
     DynamicUBOEntry result;
-    result.buffer_ = entries_[0].buffer_.GetBuffer();
-    result.dynOffset_ = entries_[0].begin_;
+    result.buffer_ = entries_.First().buffer_.GetBuffer();
+    result.dynOffset_ = entries_.First().begin_;
     result.size_ = size;
 
-    *data = (uint8*)entries_[0].buffer_.Map() + entries_[0].begin_;
+    *data = (uint8*)entries_.First().buffer_.Map() + entries_.First().begin_;
 
-    entries_[0].safeFrame_ = g_Render->GetSafeFrame();
-    entries_[0].begin_ += size;
+    entries_.First().safeToUseFrame_ = g_Render->GetSafeFrame();
+    entries_.First().begin_ += size;
 
     return result;
 }
@@ -108,7 +124,7 @@ DynamicUBOEntry DynamicUBOCache::BeginAlloc(uint size, void** data)
 //------------------------------------------------------------------------------
 void DynamicUBOCache::EndAlloc()
 {
-    entries_[0].buffer_.Unmap();
+    entries_.First().buffer_.Unmap();
 }
 
 }

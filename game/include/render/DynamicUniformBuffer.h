@@ -17,6 +17,7 @@ public:
     DynamicUniformBuffer(uint size);
 
     RESULT Init();
+    void Free();
 
     void* Map();
     void Unmap();
@@ -35,6 +36,8 @@ private:
 class DynamicUBOCache
 {
 public:
+    ~DynamicUBOCache();
+
     RESULT Init();
 
     DynamicUBOEntry BeginAlloc(uint size, void** data);
@@ -46,7 +49,7 @@ private:
     struct CacheEntry
     {
         DynamicUniformBuffer buffer_{ BUFFER_SIZE };
-        uint64 safeFrame_{};
+        uint64 safeToUseFrame_{};
         uint begin_{};
     };
 

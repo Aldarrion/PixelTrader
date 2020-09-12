@@ -4,6 +4,7 @@
 
 #include "game/Camera.h"
 
+#include "render/VertexBufferEntry.h"
 #include "render/DynamicUniformBufferEntry.h"
 #include "render/VkTypes.h"
 
@@ -56,7 +57,7 @@ class Texture;
 class ShaderManager;
 class VertexBuffer;
 class DynamicUBOCache;
-struct DynamicUBOEntry;
+class VertexBufferCache;
 
 class DrawCanvas;
 class TileRenderer;
@@ -105,6 +106,7 @@ struct RenderState
 class Render
 {
     friend RESULT CreateRender(uint width, uint height);
+    friend void DestroyRender();
 
 public:
     RESULT ReloadShaders();
@@ -117,7 +119,7 @@ public:
         state_.shaders_[stage] = shader;
     }
     void SetTexture(uint slot, Texture* texture);
-    void SetVertexBuffer(uint slot, VertexBuffer* buffer, uint offset);
+    void SetVertexBuffer(uint slot, const VertexBufferEntry& entry);
     void SetVertexLayout(uint slot, uint layoutHandle);
     void SetPrimitiveTopology(VkrPrimitiveTopology primitiveTopology);
     void SetDynamicUbo(uint slot, const DynamicUBOEntry& entry);
@@ -147,7 +149,8 @@ public:
 
     const VkPhysicalDeviceProperties& GetPhysDevProps() const;
 
-    DynamicUBOCache* GetUBOCache();
+    DynamicUBOCache* GetUBOCache() const;
+    VertexBufferCache* GetVertexCache() const;
 
     uint GetWidth() const;
     uint GetHeight() const;
@@ -248,8 +251,9 @@ private:
     using PipelineKey = uint64;
     std::unordered_map<PipelineKey, VkPipeline, FibonacciHash<PipelineKey>> pipelineCache_;
 
-    // UBO cache
-    DynamicUBOCache*    uboCache_;
+    // Caches
+    UniquePtr<DynamicUBOCache>    uboCache_;
+    UniquePtr<VertexBufferCache>  vbCache_;
 
     // Allocator
     VmaAllocator        allocator_;
@@ -282,6 +286,9 @@ private:
     RESULT AfterDraw();
 
     RESULT WaitForFence(VkFence fence);
+
+    void Free();
+    void FlushGpu(bool wait);
 
     //----------------------
     // Serialization

@@ -52,10 +52,72 @@ VkBuffer VertexBuffer::GetBuffer() const
     return buffer_;
 }
 
+uint VertexBuffer::GetSize() const
+{
+    return size_;
+}
+
 //------------------------------------------------------------------------------
 void VertexBuffer::Free()
 {
     vmaDestroyBuffer(g_Render->GetAllocator(), buffer_, allocation_);
 }
+
+
+
+//------------------------------------------------------------------------------
+RESULT VertexBufferCache::Init()
+{
+    entries_.Add(CacheEntry());
+    auto res = entries_.First().buffer_.Init();
+
+    return res;
+}
+
+//------------------------------------------------------------------------------
+VertexBufferCache::~VertexBufferCache()
+{
+    for (int i = 0; i < entries_.Count(); ++i)
+        entries_[i].buffer_.Free();
+}
+
+//------------------------------------------------------------------------------
+VertexBufferEntry VertexBufferCache::BeginAlloc(uint size, uint align, void** data)
+{
+    entries_.First().begin_ = Align(entries_.First().begin_, align);
+
+    if (BUFFER_SIZE - entries_.First().begin_ < size)
+    {
+        if (entries_.Last().safeToUseFrame_ <= g_Render->GetCurrentFrame())
+        {
+            entries_.Insert(0, entries_.Last());
+            entries_.RemoveLast();
+            entries_.First().begin_ = 0;
+        }
+        else
+        {
+            entries_.Insert(0, CacheEntry());
+            entries_.First().buffer_.Init();
+        }
+    }
+
+    VertexBufferEntry result;
+    result.buffer_ = entries_.First().buffer_.GetBuffer();
+    result.offset_ = entries_.First().begin_;
+
+    *data = (uint8*)entries_.First().buffer_.Map() + entries_.First().begin_;
+
+    entries_.First().safeToUseFrame_ = g_Render->GetSafeFrame();
+    entries_.First().begin_ += size;
+
+    return result;
+}
+
+//------------------------------------------------------------------------------
+void VertexBufferCache::EndAlloc()
+{
+    entries_.First().buffer_.Unmap();
+}
+
 
 }

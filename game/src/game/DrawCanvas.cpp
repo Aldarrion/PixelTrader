@@ -103,7 +103,7 @@ void DrawCanvas::Draw()
     linesBuffer_->Unmap();
 
     // Render
-    g_Render->SetVertexBuffer(0, linesBuffer_.Get(), 0);
+    g_Render->SetVertexBuffer(0, VertexBufferEntry{ linesBuffer_->GetBuffer(), 0 });
     g_Render->SetShader<PS_VERT>(lineVert_);
     g_Render->SetShader<PS_FRAG>(lineFrag_);
     g_Render->SetPrimitiveTopology(VkrPrimitiveTopology::LINE_STRIP);

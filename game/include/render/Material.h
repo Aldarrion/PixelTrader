@@ -40,8 +40,6 @@ public:
     void DrawTile(const TileDrawData& data);
 
 private:
-    UniquePtr<VertexBuffer> tilesBuffer_;
-
     Shader* tileVert_{};
     Shader* tileFrag_{};
     uint    tileVertexLayout_{};
@@ -59,8 +57,6 @@ public:
     void DrawShape(Span<const Vec3> verts, const Color& color);
 
 private:
-    UniquePtr<VertexBuffer> shapeBuffer_;
-
     Shader* shapeVert_{};
     Shader* shapeFrag_{};
     uint    shapeVertexLayout_{};
