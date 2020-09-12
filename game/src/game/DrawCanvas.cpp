@@ -15,6 +15,12 @@ namespace hs
 static constexpr uint MAX_LINE_VERTS = 1024;
 
 //------------------------------------------------------------------------------
+DrawCanvas::~DrawCanvas()
+{
+    linesBuffer_->Free();
+}
+
+//------------------------------------------------------------------------------
 RESULT DrawCanvas::Init()
 {
     lineVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Shape_vs.hlsl");
@@ -25,7 +31,7 @@ RESULT DrawCanvas::Init()
 
     lineVertType_ = ShapeVertexLayout();
 
-    linesBuffer_ = new VertexBuffer(MAX_LINE_VERTS * sizeof(ShapeVertex));
+    linesBuffer_ = MakeUnique<VertexBuffer>(MAX_LINE_VERTS * sizeof(ShapeVertex));
     if (FAILED(linesBuffer_->Init()))
         return R_FAIL;
 
@@ -97,7 +103,7 @@ void DrawCanvas::Draw()
     linesBuffer_->Unmap();
 
     // Render
-    g_Render->SetVertexBuffer(0, linesBuffer_, 0);
+    g_Render->SetVertexBuffer(0, linesBuffer_.Get(), 0);
     g_Render->SetShader<PS_VERT>(lineVert_);
     g_Render->SetShader<PS_FRAG>(lineFrag_);
     g_Render->SetPrimitiveTopology(VkrPrimitiveTopology::LINE_STRIP);

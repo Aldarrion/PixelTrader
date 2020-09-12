@@ -4,6 +4,7 @@
 
 #include "containers/Span.h"
 
+#include "common/Pointers.h"
 #include "common/Enums.h"
 #include "common/Types.h"
 #include "math/hs_Math.h"
@@ -39,11 +40,12 @@ public:
     void DrawTile(const TileDrawData& data);
 
 private:
-    Shader*         tileVert_{};
-    Shader*         tileFrag_{};
-    VertexBuffer*   tilesBuffer_{};
-    uint            tileVertexLayout_{};
-    uint            vertsDrawn_{};
+    UniquePtr<VertexBuffer> tilesBuffer_;
+
+    Shader* tileVert_{};
+    Shader* tileFrag_{};
+    uint    tileVertexLayout_{};
+    uint    vertsDrawn_{};
 };
 
 //------------------------------------------------------------------------------
@@ -57,13 +59,19 @@ public:
     void DrawShape(Span<const Vec3> verts, const Color& color);
 
 private:
-    Shader*         shapeVert_{};
-    Shader*         shapeFrag_{};
-    VertexBuffer*   shapeBuffer_{};
-    uint            shapeVertexLayout_{};
-    uint            vertsDrawn_{};
+    UniquePtr<VertexBuffer> shapeBuffer_;
+
+    Shader* shapeVert_{};
+    Shader* shapeFrag_{};
+    uint    shapeVertexLayout_{};
+    uint    vertsDrawn_{};
 };
 
+
+
+
+//------------------------------------------------------------------------------
+// Old materials
 //------------------------------------------------------------------------------
 class TexturedTriangleMaterial : public Material
 {

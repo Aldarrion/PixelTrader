@@ -2,16 +2,20 @@
 
 #include "Config.h"
 
-#include "render/DynamicUniformBufferEntry.h"
-
-#include "containers/Hash.h"
-#include "common/Enums.h"
-#include "common/Types.h"
-#include "containers/Array.h"
-#include "render/VkTypes.h"
 #include "game/Camera.h"
 
+#include "render/DynamicUniformBufferEntry.h"
+#include "render/VkTypes.h"
+
+#include "containers/Hash.h"
+#include "containers/Array.h"
+
 #include "math/hs_Math.h"
+
+#include "common/Pointers.h"
+#include "common/Enums.h"
+#include "common/Types.h"
+
 #include "platform/hs_Windows.h"
 
 #include <unordered_map> // TODO use custom hashmap
@@ -254,19 +258,19 @@ private:
     Array<VkPipeline>   destroyPipelines_[BB_IMG_COUNT];
 
     // Shaders
-    ShaderManager*          shaderManager_{};
-    VkDescriptorSetLayout   fsSamplerLayout_{};
-    VkDescriptorSetLayout   bindlessTexturesLayout_{};
-    VkDescriptorSetLayout   dynamicUBOLayout_{};
-    VkPipelineLayout        pipelineLayout_{};
+    UniquePtr<ShaderManager>    shaderManager_{};
+    VkDescriptorSetLayout       fsSamplerLayout_{};
+    VkDescriptorSetLayout       bindlessTexturesLayout_{};
+    VkDescriptorSetLayout       dynamicUBOLayout_{};
+    VkPipelineLayout            pipelineLayout_{};
 
     RenderState state_;
 
-    Array<Material*> materials_;
-    DrawCanvas* drawCanvas_{};
+    Array<UniquePtr<Material>>  materials_;
+    UniquePtr<DrawCanvas>       drawCanvas_;
 
-    TileRenderer* tileRenderer_{};
-    DebugShapeRenderer* debugShapeRenderer_{};
+    UniquePtr<TileRenderer>         tileRenderer_;
+    UniquePtr<DebugShapeRenderer>   debugShapeRenderer_;
 
     //----------------------
     // Vertex layout manager
@@ -281,7 +285,7 @@ private:
 
     //----------------------
     // Serialization
-    SerializationManager* serializationManager_;
+    UniquePtr<SerializationManager> serializationManager_;
 
     //----------------------
     // Camera

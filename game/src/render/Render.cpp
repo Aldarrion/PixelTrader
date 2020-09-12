@@ -870,7 +870,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
 
     //-----------------------
-    shaderManager_ = new ShaderManager();
+    shaderManager_ = MakeUnique<ShaderManager>();
     if (shaderManager_->Init() != R_OK)
         return R_FAIL;
 
@@ -894,19 +894,19 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     camera_.UpdateMatrics();
 
     // 
-    serializationManager_ = new SerializationManager();
+    serializationManager_ = MakeUnique<SerializationManager>();
     if (HS_FAILED(serializationManager_->Init()))
         return R_FAIL;
 
-    //drawCanvas_ = new DrawCanvas();
+    //drawCanvas_ = MakeUnique<DrawCanvas>();
     if (drawCanvas_ && HS_FAILED(drawCanvas_->Init()))
         return R_FAIL;
     
-    tileRenderer_ = new TileRenderer();
+    tileRenderer_ = MakeUnique<TileRenderer>();
     if (tileRenderer_ && HS_FAILED(tileRenderer_->Init()))
         return R_FAIL;
 
-    debugShapeRenderer_ = new DebugShapeRenderer();
+    debugShapeRenderer_ = MakeUnique<DebugShapeRenderer>();
     if (debugShapeRenderer_ && HS_FAILED(debugShapeRenderer_->Init()))
         return R_FAIL;
 
@@ -1356,7 +1356,7 @@ VmaAllocator Render::GetAllocator() const
 //------------------------------------------------------------------------------
 ShaderManager* Render::GetShaderManager() const
 {
-    return shaderManager_;
+    return shaderManager_.Get();
 }
 
 //------------------------------------------------------------------------------
@@ -1535,13 +1535,13 @@ Camera& Render::GetCamera()
 //------------------------------------------------------------------------------
 TileRenderer* Render::GetTileRenderer() const
 {
-    return tileRenderer_;
+    return tileRenderer_.Get();
 }
 
 //------------------------------------------------------------------------------
 DebugShapeRenderer* Render::GetDebugShapeRenderer() const
 {
-    return debugShapeRenderer_;
+    return debugShapeRenderer_.Get();
 }
 
 }

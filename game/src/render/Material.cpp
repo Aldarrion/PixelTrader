@@ -125,7 +125,7 @@ RESULT TileMaterial::Init()
         return R_FAIL;
 
     //
-    tilesBuffer_ = new VertexBuffer(1024 * 1024);
+    tilesBuffer_ = MakeUnique<VertexBuffer>(1024 * 1024);
     if (FAILED(tilesBuffer_->Init()))
         return R_FAIL;
 
@@ -137,65 +137,7 @@ RESULT TileMaterial::Init()
 //------------------------------------------------------------------------------
 void TileMaterial::Draw()
 {
-    {
-        constexpr float scale = 16;
-        auto mapped = (TileVertex*)tilesBuffer_->Map();
-
-        mapped[0].position_ = Vec4{ -1 * scale, -1 * scale, 0, 1 };
-        mapped[0].uv_ = Vec2{ 0, 1 };
-        mapped[0].color_ = 0xffffffff;
-
-        mapped[1].position_ = Vec4{ 1 * scale, -1 * scale, 0, 1 };
-        mapped[1].uv_ = Vec2{ 1, 1 };
-        mapped[1].color_ = 0xffffffff;
-
-        mapped[2].position_ = Vec4{ 1 * scale, 1 * scale, 0, 1 };
-        mapped[2].uv_ = Vec2{ 1, 0 };
-        mapped[2].color_ = 0xffffffff;
-
-        mapped[3].position_ = Vec4{ -1 * scale, -1 * scale, 0, 1 };
-        mapped[3].uv_ = Vec2{ 0, 1 };
-        mapped[3].color_ = 0xffffffff;
-
-        mapped[4].position_ = Vec4{ 1 * scale, 1 * scale, 0, 1 };
-        mapped[4].uv_ = Vec2{ 1, 0 };
-        mapped[4].color_ = 0xffffffff;
-
-        mapped[5].position_ = Vec4{ -1 * scale, 1 * scale, 0, 1 };
-        mapped[5].uv_ = Vec2{ 0, 0 };
-        mapped[5].color_ = 0xffffffff;
-
-        tilesBuffer_->Unmap();
-    }
-
-    {
-        struct SceneData
-        {
-            Mat44   Projection;
-            Vec4    ViewPos;
-        };
-
-        void* mapped;
-        DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
-        auto ubo = (SceneData*)mapped;
-
-        Mat44 camMat = g_Render->GetCamera().ToCamera();
-        Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
-        ubo->Projection = projMat;
-
-        g_Render->GetUBOCache()->EndAlloc();
-        g_Render->SetDynamicUbo(1, constBuffer);
-    }
-
-    g_Render->SetVertexLayout(0, tileVertexLayout_);
-    g_Render->SetVertexBuffer(0, tilesBuffer_, 0);
-    
-    //g_Render->SetTexture(0, tileTex_);
-
-    g_Render->SetShader<PS_VERT>(tileVert_);
-    g_Render->SetShader<PS_FRAG>(tileFrag_);
-
-    g_Render->Draw(6, 0);
+    hs_assert(false);
 }
 
 //------------------------------------------------------------------------------
@@ -268,7 +210,7 @@ void TileMaterial::DrawTile(const TileDrawData& data)
     SetSceneData();
 
     g_Render->SetVertexLayout(0, tileVertexLayout_);
-    g_Render->SetVertexBuffer(0, tilesBuffer_, vertsDrawn_ * sizeof(TileVertex));
+    g_Render->SetVertexBuffer(0, tilesBuffer_.Get(), vertsDrawn_ * sizeof(TileVertex));
     
     g_Render->SetTexture(0, data.texture_);
 
@@ -295,7 +237,7 @@ RESULT DebugShapeMaterial::Init()
     if (!shapeVert_ || !shapeFrag_)
         return R_FAIL;
 
-    shapeBuffer_ = new VertexBuffer(1024 * 1024);
+    shapeBuffer_ = MakeUnique<VertexBuffer>(1024 * 1024);
     if (FAILED(shapeBuffer_->Init()))
         return R_FAIL;
 
@@ -307,6 +249,7 @@ RESULT DebugShapeMaterial::Init()
 //------------------------------------------------------------------------------
 void DebugShapeMaterial::Draw()
 {
+    hs_assert(false);
 }
 
 //------------------------------------------------------------------------------
@@ -339,7 +282,7 @@ void DebugShapeMaterial::DrawShape(Span<const Vec3> verts, const Color& color)
     SetSceneData();
 
     g_Render->SetVertexLayout(0, shapeVertexLayout_);
-    g_Render->SetVertexBuffer(0, shapeBuffer_, vertsDrawn_ * sizeof(DebugShapeVertex));
+    g_Render->SetVertexBuffer(0, shapeBuffer_.Get(), vertsDrawn_ * sizeof(DebugShapeVertex));
 
     g_Render->SetShader<PS_VERT>(shapeVert_);
     g_Render->SetShader<PS_FRAG>(shapeFrag_);
