@@ -117,7 +117,7 @@ void Game::DrawColliders()
         verts[2] = Vec3(max.x, max.y, 0);
         verts[3] = Vec3(min.x, max.y, 0);
 
-        g_Render->GetDebugShapeRenderer()->AddShape(verts, hs_arr_len(verts), Color(0, 1, 0, 1));
+        g_Render->GetDebugShapeRenderer()->AddShape(MakeSpan(verts), Color(0, 1, 0, 1));
     }
 }
 

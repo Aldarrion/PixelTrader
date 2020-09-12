@@ -2,6 +2,8 @@
 
 #include "Config.h"
 
+#include "containers/Span.h"
+
 #include "common/Enums.h"
 #include "common/Types.h"
 #include "math/hs_Math.h"
@@ -52,7 +54,7 @@ public:
 
     RESULT Init() override;
     void Draw() override;
-    void DrawShape(Vec3* verts, uint vertCount, const Color& color);
+    void DrawShape(Span<const Vec3> verts, const Color& color);
 
 private:
     Shader*         shapeVert_{};

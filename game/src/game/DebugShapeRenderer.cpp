@@ -19,7 +19,7 @@ void DebugShapeRenderer::Draw()
 {
     for (int i = 0; i < shapes_.Count(); ++i)
     {
-        debugShapeMat_.DrawShape(shapes_[i].vertices_.Data(), shapes_[i].vertices_.Count(), shapes_[i].color_);
+        debugShapeMat_.DrawShape(MakeSpan(shapes_[i].vertices_), shapes_[i].color_);
     }
 }
 
@@ -30,12 +30,12 @@ void DebugShapeRenderer::ClearShapes()
 }
 
 //------------------------------------------------------------------------------
-void DebugShapeRenderer::AddShape(Vec3* vertices, uint vertexCount, Color color)
+void DebugShapeRenderer::AddShape(Span<const Vec3> vertices, Color color)
 {
     Array<Vec3> verts;
-    verts.Reserve(vertexCount);
+    verts.Reserve(vertices.Count());
 
-    for (uint i = 0; i < vertexCount; ++i)
+    for (uint i = 0; i < vertices.Count(); ++i)
         verts.Add(vertices[i]);
     shapes_.Add(DebugShape{ std::move(verts), color });
 }

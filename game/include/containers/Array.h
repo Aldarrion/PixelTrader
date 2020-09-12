@@ -1,5 +1,7 @@
 #pragma once
 
+#include "containers/Span.h"
+
 #include "common/Types.h"
 #include "common/hs_Assert.h"
 
@@ -8,13 +10,6 @@
 
 namespace hs
 {
-
-//------------------------------------------------------------------------------
-template<class T>
-T hs_max(T a, T b)
-{
-    return a > b ? a : b;
-}
 
 //------------------------------------------------------------------------------
 template<class T>
@@ -98,7 +93,7 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    size_t Count() const
+    uint64 Count() const
     {
         return count_;
     }
@@ -110,14 +105,14 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    const T& operator[](size_t index) const
+    const T& operator[](uint64 index) const
     {
         hs_assert(index < count_);
         return items_[index];
     }
 
     //------------------------------------------------------------------------------
-    T& operator[](size_t index)
+    T& operator[](uint64 index)
     {
         hs_assert(index < count_);
         return items_[index];
@@ -129,7 +124,7 @@ public:
         if (count_ >= capacity_)
         {
             auto oldCapacity = capacity_;
-            capacity_ = hs_max(capacity_ << 1, MIN_CAPACITY);
+            capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
             
             T* newItems = (T*)malloc(sizeof(T) * capacity_);
             memcpy(newItems, items_, sizeof(T) * oldCapacity);
@@ -142,14 +137,14 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    void Insert(size_t index, const T& item)
+    void Insert(uint64 index, const T& item)
     {
         hs_assert(index <= count_);
 
         if (count_ >= capacity_)
         {
             auto oldCapacity = capacity_;
-            capacity_ = hs_max(capacity_ << 1, MIN_CAPACITY);
+            capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
             
             T* newItems = (T*)malloc(sizeof(T) * capacity_);
             memcpy(newItems, items_, sizeof(T) * index);
@@ -169,7 +164,7 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    void Remove(size_t index)
+    void Remove(uint64 index)
     {
         hs_assert(index < count_);
         items_[index].~T();
@@ -181,7 +176,7 @@ public:
     //------------------------------------------------------------------------------
     void Clear()
     {
-        for (size_t i = 0; i < count_; ++i)
+        for (uint64 i = 0; i < count_; ++i)
         {
             items_[i].~T();
         }
@@ -189,13 +184,13 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    void Reserve(size_t capacity)
+    void Reserve(uint64 capacity)
     {
         if (capacity <= capacity_)
             return;
 
         auto oldCapacity = capacity_;
-        capacity_ = hs_max(capacity, MIN_CAPACITY);
+        capacity_ = ArrMax(capacity, MIN_CAPACITY);
             
         T* newItems = (T*)malloc(sizeof(T) * capacity_);
         memcpy(newItems, items_, sizeof(T) * oldCapacity);
@@ -217,11 +212,24 @@ public:
     }
 
 private:
-    static constexpr size_t MIN_CAPACITY = 8;
+    static constexpr uint64 MIN_CAPACITY = 8;
 
-    size_t capacity_{};
-    size_t count_{};
+    uint64 capacity_{};
+    uint64 count_{};
     T* items_{};
+
+    //------------------------------------------------------------------------------
+    uint64 ArrMax(uint64 a, uint64 b)
+    {
+        return a > b ? a : b;
+    }
 };
+
+//------------------------------------------------------------------------------
+template<class T>
+Span<T> MakeSpan(const Array<T>& array)
+{
+    return Span<T>(array.Data(), array.Count());
+}
 
 }

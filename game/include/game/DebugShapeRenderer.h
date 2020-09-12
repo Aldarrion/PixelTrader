@@ -28,7 +28,7 @@ public:
     void Draw();
 
     void ClearShapes();
-    void AddShape(Vec3* vertices, uint vertexCount, Color color);
+    void AddShape(Span<const Vec3> vertices, Color color);
 
 private:
     DebugShapeMaterial debugShapeMat_;

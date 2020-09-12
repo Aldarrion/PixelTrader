@@ -318,7 +318,7 @@ struct DebugShapeVertex
 };
 
 //------------------------------------------------------------------------------
-void DebugShapeMaterial::DrawShape(Vec3* verts, uint vertCount, const Color& color)
+void DebugShapeMaterial::DrawShape(Span<const Vec3> verts, const Color& color)
 {
     {
         // TODO get rid of this and use a proper dynamic vertex buffer
@@ -327,7 +327,7 @@ void DebugShapeMaterial::DrawShape(Vec3* verts, uint vertCount, const Color& col
 
         auto mapped = (DebugShapeVertex*)shapeBuffer_->Map() + vertsDrawn_;
 
-        for (uint i = 0; i < vertCount; ++i)
+        for (uint i = 0; i < verts.Count(); ++i)
         {
             mapped[i].color_ = color.ToSrgbUint();
             mapped[i].position_ = verts[i].ToVec4Pos();
@@ -345,8 +345,8 @@ void DebugShapeMaterial::DrawShape(Vec3* verts, uint vertCount, const Color& col
     g_Render->SetShader<PS_FRAG>(shapeFrag_);
     g_Render->SetPrimitiveTopology(VkrPrimitiveTopology::LINE_STRIP);
 
-    g_Render->Draw(vertCount, 0);
-    vertsDrawn_ += vertCount;
+    g_Render->Draw(verts.Count(), 0);
+    vertsDrawn_ += verts.Count();
 }
 
 
