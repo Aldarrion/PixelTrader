@@ -34,6 +34,76 @@ const char* ShadercStatusToString(shaderc_compilation_status status)
 }
 
 //------------------------------------------------------------------------------
+RESULT ReadFile(const char* file, char** buffer, size_t& size)
+{
+    FILE* f = fopen(file, "r");
+    if (!f)
+    {
+        Log(LogLevel::Error, "Failed to open the file");
+        return R_FAIL;
+    }
+
+    fseek(f , 0 , SEEK_END);
+    auto fileSize = ftell(f);
+    rewind(f);
+
+    *buffer = (char*)malloc(fileSize);
+    if (!*buffer)
+    {
+        fclose(f);
+        free(*buffer);
+        Log(LogLevel::Error, "Failed to alloc space for shader file");
+        return R_FAIL;
+    }
+
+    size_t readRes = fread(*buffer, 1, fileSize, f);
+    auto eof = feof(f);
+    if (readRes != fileSize && !eof)
+    {
+        free(*buffer);
+        fclose(f);
+        Log(LogLevel::Error, "Failed to read the shader file, error %d", ferror(f));
+        return R_FAIL;
+    }
+    fclose(f);
+
+    size = readRes;
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+shaderc_include_result* ShaderIncludeResolver(
+    void* userData, const char* requestedSource, int type,
+    const char* requestingSource, size_t includeDepth)
+{
+    auto result = new shaderc_include_result();
+    result->source_name = requestedSource;
+    result->source_name_length = strlen(requestedSource);
+
+    char filePath[128];
+    sprintf(filePath, "../shaders/%s", requestedSource);
+
+    char* buffer{};
+    size_t size{};
+    if (HS_FAILED(ReadFile(filePath, &buffer, size)))
+        return nullptr;
+
+    result->content = buffer;
+    result->content_length = size;
+    result->user_data = buffer;
+
+    return result;
+}
+
+//------------------------------------------------------------------------------
+void ShaderIncludeReleaser(void* userData, shaderc_include_result* includeResult)
+{
+    free(userData);
+    delete includeResult;
+}
+
+//------------------------------------------------------------------------------
 RESULT ShaderManager::Init()
 {
     shadercCompiler_ = shaderc_compiler_initialize();
@@ -45,6 +115,9 @@ RESULT ShaderManager::Init()
 
     opts_ = shaderc_compile_options_initialize();
     shaderc_compile_options_set_source_language(opts_, shaderc_source_language_hlsl);
+    shaderc_compile_options_set_optimization_level(opts_, shaderc_optimization_level_performance);
+    shaderc_compile_options_set_warnings_as_errors(opts_);
+    shaderc_compile_options_set_include_callbacks(opts_, &ShaderIncludeResolver, &ShaderIncludeReleaser, nullptr);
 
     return R_OK;
 }
@@ -68,40 +141,22 @@ RESULT ShaderManager::CompileShader(const char* file, PipelineStage type, Shader
 {
     Log(LogLevel::Info, "---- Compiling shader %s ----", file);
 
-    FILE* f = fopen(file, "r");
-    if (!f)
-    {
-        Log(LogLevel::Error, "Failed to open the file");
+    char* buffer{};
+    size_t size{};
+    if (HS_FAILED(ReadFile(file, &buffer, size)))
         return R_FAIL;
-    }
-
-    fseek(f , 0 , SEEK_END);
-    auto size = ftell(f);
-    rewind(f);
-
-    char* buffer = (char*)malloc(size);
-    if (!buffer)
-    {
-        fclose(f);
-        free(buffer);
-        Log(LogLevel::Error, "Failed to alloc space for shader file");
-        return R_FAIL;
-    }
-
-    auto readRes = fread(buffer, 1, size, f);
-    auto eof = feof(f);
-    if (readRes != size && !eof)
-    {
-        free(buffer);
-        fclose(f);
-        Log(LogLevel::Error, "Failed to read the shader file, error %d", ferror(f));
-        return R_FAIL;
-    }
-    fclose(f);
 
     shaderc_shader_kind kind = type == PipelineStage::PS_VERT ? shaderc_glsl_vertex_shader : shaderc_glsl_fragment_shader;
 
-    shaderc_compilation_result_t result = shaderc_compile_into_spv(shadercCompiler_, buffer, readRes, kind, file, "main", opts_);
+    const char* values[2] = { "0", "0" };
+    if (type == PipelineStage::PS_VERT)
+        values[0] = "1";
+    else
+        values[1] = "1";
+
+    shaderc_compile_options_add_macro_definition(opts_, "VS", 2, values[0], 1);
+    shaderc_compile_options_add_macro_definition(opts_, "PS", 2, values[1], 1);
+    shaderc_compilation_result_t result = shaderc_compile_into_spv(shadercCompiler_, buffer, size, kind, file, "main", opts_);
     free(buffer);
 
     shaderc_compilation_status status = shaderc_result_get_compilation_status(result);
