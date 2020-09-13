@@ -121,6 +121,9 @@ public:
     //------------------------------------------------------------------------------
     void Add(const T& item)
     {
+        // Check for aliasing
+        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
+
         if (count_ >= capacity_)
         {
             auto oldCapacity = capacity_;
@@ -140,13 +143,15 @@ public:
     void Insert(uint64 index, const T& item)
     {
         hs_assert(index <= count_);
+        // Check for aliasing
+        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
 
         if (count_ >= capacity_)
         {
             auto oldCapacity = capacity_;
             capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
             
-            T* newItems = (T*)malloc(sizeof(T) * capacity_);
+            auto newItems = (T*)malloc(sizeof(T) * capacity_);
             memcpy(newItems, items_, sizeof(T) * index);
             memcpy(&newItems[index + 1], &items_[index], (oldCapacity - index) * sizeof(T));
 
