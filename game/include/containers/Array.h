@@ -18,7 +18,11 @@ class Array
 {
 public:
     //------------------------------------------------------------------------------
-    Array() = default;
+    Array()
+        : capacity_(0)
+        , count_(0)
+        , items_(nullptr)
+    {}
 
     //------------------------------------------------------------------------------
     ~Array()
@@ -290,9 +294,21 @@ public:
 
         auto oldCapacity = capacity_;
         capacity_ = ArrMax(capacity, MIN_CAPACITY);
-            
+
         T* newItems = (T*)malloc(sizeof(T) * capacity_);
-        memcpy(newItems, items_, sizeof(T) * oldCapacity);
+        if (std::is_trivial_v<T>)
+        {
+            memcpy(newItems, items_, sizeof(T) * oldCapacity);
+        }
+        else
+        {
+            for (int i = 0; i < count_; ++i)
+            {
+                new(newItems + i) T(std::move(items_[i]));
+                items_[i].~T();
+            }
+        }
+
         free(items_);
         items_ = newItems;
     }
@@ -334,9 +350,9 @@ public:
 private:
     static constexpr uint64 MIN_CAPACITY = 8;
 
-    uint64 capacity_{};
-    uint64 count_{};
-    T* items_{};
+    uint64 capacity_;
+    uint64 count_;
+    T* items_;
 
     //------------------------------------------------------------------------------
     uint64 ArrMax(uint64 a, uint64 b)
