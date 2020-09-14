@@ -13,7 +13,7 @@ public:
     using Pointer_t = T*;
 
     //------------------------------------------------------------------------------
-    UniquePtr() = default;
+    UniquePtr() : ptr_(nullptr) {}
 
     //------------------------------------------------------------------------------
     explicit UniquePtr(T* p)
@@ -25,7 +25,7 @@ public:
     UniquePtr<T>& operator=(const UniquePtr<T>&) = delete;
 
     //------------------------------------------------------------------------------
-    UniquePtr(const UniquePtr<T>&& other)
+    UniquePtr(UniquePtr<T>&& other)
     {
         ptr_ = other.ptr_;
         other.ptr_ = nullptr;
@@ -94,7 +94,7 @@ public:
     }
 
 private:
-    T* ptr_{};
+    T* ptr_;
 };
 
 //------------------------------------------------------------------------------

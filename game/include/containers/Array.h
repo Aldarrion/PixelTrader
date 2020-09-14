@@ -120,11 +120,10 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    void Add(const T& item)
+    template<class ...ArgsT>
+    void EmplaceBack(ArgsT ...args)
     {
         // Check for aliasing
-        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
-
         if (count_ == capacity_)
         {
             capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
@@ -149,22 +148,20 @@ public:
 
         hs_assert(count_ < capacity_);
 
-        new(items_ + count_) T(item);
+        new(items_ + count_) T(std::forward<ArgsT>(args)...);
         ++count_;
     }
 
     //------------------------------------------------------------------------------
-    void Insert(uint64 index, const T& item)
+    template<class ...ArgsT>
+    void Emplace(uint64 index, ArgsT ...args)
     {
         hs_assert(index <= count_);
         if (index == count_)
         {
-            Add(item);
+            EmplaceBack(std::forward<ArgsT>(args)...);
             return;
         }
-
-        // Check for aliasing
-        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
 
         if (count_ == capacity_)
         {
@@ -192,7 +189,7 @@ public:
 
             free(items_);
             items_ = newItems;
-            new(items_ + index) T(item);
+            new(items_ + index) T(std::forward<ArgsT>(args)...);
         }
         else
         {
@@ -207,15 +204,47 @@ public:
                 // New last place is not initialized item, move construct there
                 new(items_ + count_) T(std::move(items_[count_ - 1]));
                 // Other items can be move assigned
-                for (T* item = items_ + index; item != items_ + count_ - 1; ++item)
-                    item[1] = std::move(*item);
+                for (T* item = items_ + count_- 1; item != items_ + index; --item)
+                    *item = std::move(*(item - 1));
             }
 
-            items_[index] = item;
+            items_[index] = T(std::forward<ArgsT>(args)...);
         }
 
         hs_assert(count_ < capacity_);
         ++count_;
+    }
+
+    //------------------------------------------------------------------------------
+    void Add(const T& item)
+    {
+        // Check for aliasing
+        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
+        EmplaceBack(item);
+    }
+
+    //------------------------------------------------------------------------------
+    void Add(T&& item)
+    {
+        // Check for aliasing
+        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
+        EmplaceBack(std::move(item));
+    }
+
+    //------------------------------------------------------------------------------
+    void Insert(uint64 index, const T& item)
+    {
+        // Check for aliasing
+        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
+        Emplace(index, item);
+    }
+
+    //------------------------------------------------------------------------------
+    void Insert(uint64 index, T&& item)
+    {
+        // Check for aliasing
+        hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
+        Emplace(index, std::move(item));
     }
 
     //------------------------------------------------------------------------------
