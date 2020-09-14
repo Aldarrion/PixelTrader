@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <type_traits>
 
 namespace hs
 {
@@ -124,16 +125,29 @@ public:
         // Check for aliasing
         hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
 
-        if (count_ >= capacity_)
+        if (count_ == capacity_)
         {
-            auto oldCapacity = capacity_;
             capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
             
             T* newItems = (T*)malloc(sizeof(T) * capacity_);
-            memcpy(newItems, items_, sizeof(T) * oldCapacity);
+
+            if (std::is_trivial_v<T>)
+            {
+                memcpy(newItems, items_, sizeof(T) * count_);
+            }
+            else
+            {
+                for (int i = 0; i < count_; ++i)
+                {
+                    new(newItems + i) T(std::move(items_[i]));
+                    items_[i].~T();
+                }
+            }
             free(items_);
             items_ = newItems;
         }
+
+        hs_assert(count_ < capacity_);
 
         new(items_ + count_) T(item);
         ++count_;
@@ -143,28 +157,64 @@ public:
     void Insert(uint64 index, const T& item)
     {
         hs_assert(index <= count_);
+        if (index == count_)
+        {
+            Add(item);
+            return;
+        }
+
         // Check for aliasing
         hs_assert((&item < items_ || &item >= items_ + capacity_) && "Inserting item from array to itself is not handled");
 
-        if (count_ >= capacity_)
+        if (count_ == capacity_)
         {
-            auto oldCapacity = capacity_;
             capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
-            
+
             auto newItems = (T*)malloc(sizeof(T) * capacity_);
-            memcpy(newItems, items_, sizeof(T) * index);
-            memcpy(&newItems[index + 1], &items_[index], (oldCapacity - index) * sizeof(T));
+            if (std::is_trivial_v<T>)
+            {
+                memcpy(newItems, items_, sizeof(T) * index);
+                memcpy(&newItems[index + 1], &items_[index], (count_ - index) * sizeof(T));
+            }
+            else
+            {
+                for (int i = 0; i < index; ++i)
+                {
+                    new(newItems + i) T(std::move(items_[i]));
+                    items_[i].~T();
+                }
+                for (int i = index; i < count_; ++i)
+                {
+                    new(newItems + i + 1) T(std::move(items_[i]));
+                    items_[i].~T();
+                }
+            }
 
             free(items_);
             items_ = newItems;
+            new(items_ + index) T(item);
         }
         else
         {
             // Move items by one to the right
-            memmove(&items_[index + 1], &items_[index], (count_ - index) * sizeof(T));
+            if (std::is_trivial_v<T>)
+            {
+                memmove(&items_[index + 1], &items_[index], (count_ - index) * sizeof(T));
+            }
+            else
+            {
+                // count_ is at least 1, otherwise there is early exit
+                // New last place is not initialized item, move construct there
+                new(items_ + count_) T(std::move(items_[count_ - 1]));
+                // Other items can be move assigned
+                for (T* item = items_ + index; item != items_ + count_ - 1; ++item)
+                    item[1] = std::move(*item);
+            }
+
+            items_[index] = item;
         }
 
-        new(items_ + index) T(item);
+        hs_assert(count_ < capacity_);
         ++count_;
     }
 
@@ -172,10 +222,19 @@ public:
     void Remove(uint64 index)
     {
         hs_assert(index < count_);
-        items_[index].~T();
-        
+
+        if (std::is_trivial_v<T>)
+        {
+            memmove(&items_[index], &items_[index + 1], (count_ - index) * sizeof(T));
+        }
+        else
+        {
+            for (T* item = items_ + index; item != items_ + count_ - 1; ++item)
+                *item = std::move(item[1]);
+            items_[count_ - 1].~T();
+        }
+
         --count_;
-        memmove(&items_[index], &items_[index + 1], (count_ - index) * sizeof(T));
     }
 
     //------------------------------------------------------------------------------

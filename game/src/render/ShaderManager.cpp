@@ -116,7 +116,6 @@ RESULT ShaderManager::Init()
     opts_ = shaderc_compile_options_initialize();
     shaderc_compile_options_set_source_language(opts_, shaderc_source_language_hlsl);
     shaderc_compile_options_set_optimization_level(opts_, shaderc_optimization_level_performance);
-    shaderc_compile_options_set_warnings_as_errors(opts_);
     shaderc_compile_options_set_include_callbacks(opts_, &ShaderIncludeResolver, &ShaderIncludeReleaser, nullptr);
 
     return R_OK;
