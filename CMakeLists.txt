@@ -36,6 +36,14 @@ target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/shaderc_combined.lib")
 set_property(TARGET ${PROJ_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 
 if(MSVC)
+    # Disable C++ exceptions
+    string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+
+    # Disable RTTI
+    string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+
     # shaderc is compiled with /MD so we cannot compile with /MDd even on debug or we would need to rebuild the shaderc_combined.lib
     set_property(TARGET ${PROJ_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
     # Also for shaderc
