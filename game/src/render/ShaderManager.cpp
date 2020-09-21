@@ -39,7 +39,7 @@ RESULT ReadFile(const char* file, char** buffer, size_t& size)
     FILE* f = fopen(file, "r");
     if (!f)
     {
-        Log(LogLevel::Error, "Failed to open the file");
+        Log(LogLevel::Error, "Failed to open file %s", file);
         return R_FAIL;
     }
 
@@ -127,7 +127,7 @@ ShaderManager::~ShaderManager()
     shaderc_compiler_release(shadercCompiler_);
     shaderc_compile_options_release(opts_);
 
-    for (const auto it : cache_)
+    for (const auto& it : cache_)
         vkDestroyShaderModule(g_Render->GetDevice(), it.second->vkShader_, nullptr);
     cache_.clear();
 

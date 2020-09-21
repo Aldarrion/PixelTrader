@@ -16,6 +16,7 @@ namespace hs
 class Material
 {
 public:
+    virtual ~Material() = default;
     virtual RESULT Init() = 0;
     virtual void Draw() = 0;
 };

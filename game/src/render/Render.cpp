@@ -27,7 +27,7 @@
 
 
 //------------------------------------------------------------------------------
-static constexpr const char* CAMERA_CFG = "configs/Camera.json";
+//static constexpr const char* CAMERA_CFG = "configs/Camera.json";
 
 //------------------------------------------------------------------------------
 const char* ResultToString(VkResult result)
@@ -372,7 +372,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     int bestDevice = 0;
     // TODO Actually find the best device and check capabilities here
-    vkPhysicalDevice_ = physicalDevices[0];
+    vkPhysicalDevice_ = physicalDevices[bestDevice];
 
     vkGetPhysicalDeviceProperties(vkPhysicalDevice_, &vkPhysicalDeviceProperties_);
 
@@ -1328,7 +1328,7 @@ void Render::Update(float dTime)
     const Color clearColor = Color::ToLinear(Color{ 0.72f, 0.74f, 0.98f, 1.0f });
 
     VkClearValue clearVal[2] = {};
-    clearVal[0].color = VkClearColorValue { clearColor.r, clearColor.g, clearColor.b, clearColor.a };
+    clearVal[0].color = VkClearColorValue { { clearColor.r, clearColor.g, clearColor.b, clearColor.a } };
     clearVal[1].depthStencil =  VkClearDepthStencilValue { 1, 0 };
 
     VkRenderPassBeginInfo renderPassBeginInfo{};

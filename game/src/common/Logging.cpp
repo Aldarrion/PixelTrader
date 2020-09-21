@@ -37,7 +37,7 @@ void Log(LogLevel level, const char* formatString, ...)
             break;
     }
 
-    snprintf(buffer, buffSize - 1, prefix);
+    snprintf(buffer, buffSize - 1, "%s", prefix);
 
     const size_t prefixSize = strlen(prefix);
     const int len = vsnprintf(buffer + prefixSize, buffSize - 1 - prefixSize, formatString, args);
@@ -52,9 +52,6 @@ void Log(LogLevel level, const char* formatString, ...)
 //------------------------------------------------------------------------------
 void Mat44ToString(const Mat44& m, char* buff)
 {
-    constexpr const char* LINE = "1.111 2.222 3.333 4.444\n";
-    uint LINE_LEN = strlen(LINE);
-    
     uint offset = 0;
     for (int i = 0; i < 4; ++i)
     {

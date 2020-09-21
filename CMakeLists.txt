@@ -31,10 +31,30 @@ target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext
 target_include_directories(${PROJ_NAME} PRIVATE "${VK_SDK_DIR}/Include")
 
 target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/vulkan-1.lib")
-target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/shaderc_combined.lib")
+target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/shaderc_shared.lib")
 
 set_property(TARGET ${PROJ_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+
+    target_compile_options(${PROJ_NAME} PRIVATE -Werror)
+
+    target_compile_options(${PROJ_NAME} PRIVATE -fsanitize=undefined)
+
+    target_compile_options(${PROJ_NAME} PRIVATE -Wno-unused-private-field)
+    target_compile_options(${PROJ_NAME} PRIVATE -Wno-nullability-completeness)
+    target_compile_options(${PROJ_NAME} PRIVATE -Wno-range-loop-construct)
+
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4267") # conversion from 'size_t' to 'uint', possible loss of data
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244") # conversion from 'LONG' to 'float', possible loss of data
+
+endif()
+
+# Shared setup for all MSVC-like compilers
 if(MSVC)
     # Disable C++ exceptions
     string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -44,18 +64,13 @@ if(MSVC)
     string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
 
+    add_definitions(/D _CRT_SECURE_NO_WARNINGS)
+
     # shaderc is compiled with /MD so we cannot compile with /MDd even on debug or we would need to rebuild the shaderc_combined.lib
-    set_property(TARGET ${PROJ_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+    set_property(TARGET ${PROJ_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
     # Also for shaderc
     add_definitions(-D_HAS_ITERATOR_DEBUGGING=0)
     add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
-
-    add_definitions(/MP)
-    add_definitions(/D _CRT_SECURE_NO_WARNINGS)
-    target_compile_options(${PROJ_NAME} PRIVATE /WX)
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4267") # conversion from 'size_t' to 'uint', possible loss of data
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244") # conversion from 'LONG' to 'float', possible loss of data
 endif()
 
 # Solution name

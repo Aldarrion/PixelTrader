@@ -31,11 +31,11 @@ struct StrHash
 {
     uint64 operator()(const char* key) const
     {
-        uint64 hash = 9909453657034508789;
+        uint64 hash = 9909453657034508789u;
         uint len = strlen(key);
         for (uint i = 0; i < len; ++i)
         {
-            hash = hash * 1525334644490293591 + key[i];
+            hash = hash * 1525334644490293591u + key[i];
         }
         return hash;
     }

@@ -265,7 +265,7 @@ RESULT SerializationManager::Init()
 {
     defs_.emplace("CameraDef", new CameraDef());
 
-    for (const auto def : defs_)
+    for (const auto& def : defs_)
         def.second->Init();
 
     return R_OK;

@@ -2,6 +2,8 @@
 
 #include "common/hs_Assert.h"
 
+#include <cstddef>
+
 namespace hs
 {
 

@@ -359,11 +359,11 @@ void PhongMaterial::Draw()
 
     void* mapped;
     DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
-    auto ubo = (SceneData*)mapped;
+    //auto ubo = (SceneData*)mapped;
 
     //ubo->Projection = g_Render->GetCamera().ToCamera() * g_Render->GetCamera().ToProjection();
     //ubo->ViewPos    = g_Render->GetCamera().Position().ToVec4();
-    
+
     g_Render->GetUBOCache()->EndAlloc();
 
     g_Render->SetDynamicUbo(1, constBuffer);

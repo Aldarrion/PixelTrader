@@ -195,7 +195,7 @@ struct CameraDef : DefBase
     static constexpr const char* NAME = "CameraDef";
 
     //------------------------------------------------------------------------------
-    uint GetLatestVersion() const
+    uint GetLatestVersion() const override
     {
         return 1;
     }
