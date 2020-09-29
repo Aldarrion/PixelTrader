@@ -28,7 +28,7 @@ bool CheckResult(VkResult result, const char* file, int line, const char* fun);
 #define VKR_CHECK(x) VKR_SUCCEED(x)
 #define VKR_FAILED(x) !VKR_SUCCEED(x)
 
-#define VKR_ALLOCA(size) _alloca(size)
+#define HS_ALLOCA(Type, count) (Type*)_alloca(count * sizeof(Type))
 
 
 //------------------------------------------------------------------------------

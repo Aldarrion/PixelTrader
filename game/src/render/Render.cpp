@@ -381,7 +381,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     uint queueCount;
     vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice_, &queueCount, nullptr);
 
-    auto queueProps = (VkQueueFamilyProperties*) VKR_ALLOCA(queueCount * sizeof(VkQueueFamilyProperties));
+    auto queueProps = HS_ALLOCA(VkQueueFamilyProperties, queueCount);
     vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice_, &queueCount, queueProps);
 
     uint directQueueBits = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
@@ -482,7 +482,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     uint surfaceFmtCount;
     if (VKR_FAILED(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice_, vkSurface_, &surfaceFmtCount, nullptr)))
         return R_FAIL;
-    auto formats = (VkSurfaceFormatKHR*)VKR_ALLOCA(surfaceFmtCount * sizeof(VkSurfaceFormatKHR));
+    auto formats = HS_ALLOCA(VkSurfaceFormatKHR, surfaceFmtCount);
     if (VKR_FAILED(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice_, vkSurface_, &surfaceFmtCount, formats)))
         return R_FAIL;
 
@@ -502,7 +502,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     uint presentModeCount{};
     if (VKR_FAILED(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice_, vkSurface_, &presentModeCount, nullptr)))
         return R_FAIL;
-    auto presentModes = (VkPresentModeKHR*)VKR_ALLOCA(presentModeCount * sizeof(VkPresentModeKHR));
+    auto presentModes = HS_ALLOCA(VkPresentModeKHR, presentModeCount);
     if (VKR_FAILED(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice_, vkSurface_, &presentModeCount, presentModes)))
         return R_FAIL;
 
