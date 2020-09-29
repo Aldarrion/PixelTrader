@@ -7,13 +7,13 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
-StagingBuffer::StagingBuffer(uint size)
+TempStagingBuffer::TempStagingBuffer(uint size)
     : size_(size)
 {
 }
 
 //------------------------------------------------------------------------------
-RESULT StagingBuffer::Allocate(void* data)
+RESULT TempStagingBuffer::Allocate(void* data)
 {
     // Create the buffer
     VkBufferCreateInfo bufferInfo{};
@@ -27,6 +27,8 @@ RESULT StagingBuffer::Allocate(void* data)
 
     if (VKR_FAILED(vmaCreateBuffer(g_Render->GetAllocator(), &bufferInfo, &allocInfo, &buffer_, &allocation_, nullptr)))
         return R_FAIL;
+
+    g_Render->DestroyLater(buffer_, allocation_);
 
     if (data)
     {
@@ -43,7 +45,7 @@ RESULT StagingBuffer::Allocate(void* data)
 }
 
 //------------------------------------------------------------------------------
-VkBuffer StagingBuffer::GetBuffer() const
+VkBuffer TempStagingBuffer::GetBuffer() const
 {
     return buffer_;
 }

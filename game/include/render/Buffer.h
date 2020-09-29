@@ -7,10 +7,10 @@
 namespace hs
 {
 
-class StagingBuffer
+class TempStagingBuffer
 {
 public:
-    StagingBuffer(uint size);
+    TempStagingBuffer(uint size);
     RESULT Allocate(void* data);
 
     VkBuffer GetBuffer() const;

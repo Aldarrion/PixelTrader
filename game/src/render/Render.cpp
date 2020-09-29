@@ -963,14 +963,18 @@ void Render::FlushGpu()
             WaitForFence(nextImageFence_);
         }
         WaitForFence(directQueueFences_[currentBBIdx_]);
+
+        vkResetDescriptorPool(vkDevice_, dynamicUBODPool_[currentBBIdx_], 0);
+
+        // Reset kept alive objects
+        for (int i = 0; i < destroyPipelines_[currentBBIdx_].Count(); ++i)
+            vkDestroyPipeline(vkDevice_, destroyPipelines_[currentBBIdx_][i], nullptr);
+        destroyPipelines_[currentBBIdx_].Clear();
+
+        for (int i = 0; i < destroyBuffers_[currentBBIdx_].Count(); ++i)
+            vmaDestroyBuffer(allocator_, destroyBuffers_[currentBBIdx_][i].buffer_, destroyBuffers_[currentBBIdx_][i].allocation_);
+        destroyBuffers_[currentBBIdx_].Clear();
     }
-
-    vkResetDescriptorPool(vkDevice_, dynamicUBODPool_[currentBBIdx_], 0);
-
-    // Reset kept alive objects
-    for (int i = 0; i < destroyPipelines_[currentBBIdx_].Count(); ++i)
-        vkDestroyPipeline(vkDevice_, destroyPipelines_[currentBBIdx_][i], nullptr);
-    destroyPipelines_[currentBBIdx_].Clear();
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1367,6 +1371,12 @@ void Render::Update(float dTime)
     FlushGpu<true, true>();
 
     ++frame_;
+}
+
+//------------------------------------------------------------------------------
+void Render::DestroyLater(VkBuffer buffer, VmaAllocation allocation)
+{
+    destroyBuffers_[currentBBIdx_].Add({ buffer, allocation });
 }
 
 //------------------------------------------------------------------------------

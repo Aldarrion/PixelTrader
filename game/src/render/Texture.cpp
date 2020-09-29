@@ -136,7 +136,7 @@ RESULT Texture::Allocate(void** data, const char* diagName)
         for (uint i = 0; i < imgInfo.arrayLayers; ++i)
         {
             uint buffSize = size_.width * size_.height * 4;
-            StagingBuffer staging(buffSize);
+            TempStagingBuffer staging(buffSize);
             if (FAILED(staging.Allocate(data[i])))
                 return R_FAIL;
 
@@ -154,8 +154,6 @@ RESULT Texture::Allocate(void** data, const char* diagName)
             region.imageExtent = size_;
 
             vkCmdCopyBufferToImage(g_Render->CmdBuff(), staging.GetBuffer(), image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-            // TODO put staging to a "keep alive" array
         }
 
         g_Render->TransitionBarrier(

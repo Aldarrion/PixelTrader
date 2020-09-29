@@ -137,6 +137,7 @@ public:
     uint64 GetCurrentFrame() const;
     uint64 GetSafeFrame() const;
 
+    void DestroyLater(VkBuffer buffer, VmaAllocation allocation);
 
     void TransitionBarrier(
         VkImage img, VkImageSubresourceRange subresource,
@@ -259,7 +260,13 @@ private:
     VmaAllocator        allocator_;
 
     // Keep alive objects
-    Array<VkPipeline>   destroyPipelines_[BB_IMG_COUNT];
+    struct BufferToRelease
+    {
+        VkBuffer        buffer_;
+        VmaAllocation   allocation_;
+    };
+    Array<VkPipeline>       destroyPipelines_[BB_IMG_COUNT];
+    Array<BufferToRelease>  destroyBuffers_[BB_IMG_COUNT];
 
     // Shaders
     UniquePtr<ShaderManager>    shaderManager_{};
