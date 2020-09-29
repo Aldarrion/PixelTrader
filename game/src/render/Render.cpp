@@ -906,7 +906,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     //drawCanvas_ = MakeUnique<DrawCanvas>();
     if (drawCanvas_ && HS_FAILED(drawCanvas_->Init()))
         return R_FAIL;
-    
+
     tileRenderer_ = MakeUnique<TileRenderer>();
     if (tileRenderer_ && HS_FAILED(tileRenderer_->Init()))
         return R_FAIL;
@@ -1081,7 +1081,7 @@ RESULT Render::PrepareForDraw()
     {
         depthStencil.sType              = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencil.depthTestEnable    = (state_.depthState_ & DS_TEST) ? VK_TRUE : VK_FALSE;
-        depthStencil.depthWriteEnable   = (state_.depthState_ & DS_WRITE) ? VK_TRUE : VK_FALSE;;
+        depthStencil.depthWriteEnable   = (state_.depthState_ & DS_WRITE) ? VK_TRUE : VK_FALSE;
         depthStencil.depthCompareOp     = VK_COMPARE_OP_LESS;
     }
 
@@ -1151,12 +1151,11 @@ RESULT Render::PrepareForDraw()
     if (VKR_FAILED(vkAllocateDescriptorSets(vkDevice_, &dsAllocInfo, &state_.uboDescSet_)))
         return R_FAIL;
 
-    if (state_.fsDirtyTextures_ || true) // TODO handle the case where no textures are dirty but a UBO descriptor set is needed
+    // Fill bindless UBO
     {
-        void* mapped;
-        state_.bindlessUBO_ = uboCache_->BeginAlloc(sizeof(BindingUBO), &mapped);
-        
-        auto ubo = (BindingUBO*)mapped;
+        BindingUBO* ubo;
+        state_.bindlessUBO_ = uboCache_->BeginAlloc(sizeof(BindingUBO), (void**)&ubo);
+
         for (uint i = 0; i < SRV_SLOT_COUNT; ++i)
         {
             ubo->SRV[i] = state_.fsTextures_[i];
@@ -1460,12 +1459,11 @@ void Render::ResetState()
 //------------------------------------------------------------------------------
 void Render::SetTexture(uint slot, Texture* texture)
 {
-    uint texIdx = texture->GetBindlessIndex();
+    uint texIdx = texture ? texture->GetBindlessIndex() : 0;
     if (state_.fsTextures_[slot] == texIdx)
         return;
 
     state_.fsTextures_[slot] = texIdx;
-    state_.fsDirtyTextures_ |= (uint64) 1 << slot;
 }
 
 //------------------------------------------------------------------------------
@@ -1531,12 +1529,10 @@ void RenderState::Reset()
         shaders_[i] = {};
 
     for (uint i = 0; i < SRV_SLOT_COUNT; ++i)
-        fsTextures_[i] = RenderState::INVALID_DESC;
+        fsTextures_[i] = 0;
 
     for (int i = 0; i < DYNAMIC_UBO_COUNT; ++i)
         dynamicUBOs_[i] = {};
-
-    fsDirtyTextures_ = 0;
 
     for (int i = 0; i < MAX_VERT_BUFF; ++i)
     {

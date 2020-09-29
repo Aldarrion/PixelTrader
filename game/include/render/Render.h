@@ -86,8 +86,6 @@ struct RenderState
 
     DynamicUBOEntry         bindlessUBO_{};
 
-    uint64                  fsDirtyTextures_{};
-
     VkBuffer                vertexBuffers_[MAX_VERT_BUFF];
     VkDeviceSize            vbOffsets_[MAX_VERT_BUFF];
     VkDescriptorSet         uboDescSet_{};
