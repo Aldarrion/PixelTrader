@@ -33,6 +33,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
                 g_isWindowActive = false;
             return DefWindowProc(hWnd, msg, wParam, lParam);
         }
+        case WM_CLOSE:
+            DestroyWindow(hWnd);
+            g_hwnd = nullptr;
+            break;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
@@ -171,7 +175,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
 
-            if (GetForegroundWindow() != g_hwnd)
+            if (g_hwnd && GetForegroundWindow() != g_hwnd)
                 continue;
 
             switch (msg.message)
