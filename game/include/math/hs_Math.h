@@ -12,7 +12,8 @@ static constexpr float HS_PI = 3.14159265359f;
 static constexpr float HS_TAU = 2 * HS_PI;
 
 //------------------------------------------------------------------------------
-inline constexpr uint Max(uint a, uint b)
+template<class NumberT>
+inline constexpr NumberT Max(NumberT a, NumberT b)
 {
     return a > b ? a : b;
 }
@@ -34,6 +35,13 @@ inline constexpr float DegToRad(float deg)
 inline constexpr float RadToDeg(float rad)
 {
     return (rad * 180.0f) / HS_PI;
+}
+
+//------------------------------------------------------------------------------
+template<class NumberT>
+inline constexpr float Sqr(NumberT x)
+{
+    return x * x;
 }
 
 //------------------------------------------------------------------------------

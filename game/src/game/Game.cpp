@@ -228,34 +228,54 @@ RESULT Game::InitWin32()
     return R_OK;
 }
 
-
+bool isGrounded = false;
+float height = 64;
+float timeToJump = 0.5f;
+float jumpVelocity = (2 * height) / (timeToJump);
+float gravity = (-2 * height) / Sqr(timeToJump);
+Vec2 velocity = Vec2::ZERO();
+float groundLevel = 8;
 //------------------------------------------------------------------------------
 void Game::Update(float dTime)
 {
     dTime_ = dTime;
 
-    // Move camera
     {
         // Assume "player" is the first character
         Vec3& pos = characters_.Positions[0];
-        float speed{ 40 };
-        if (g_Input->GetState('W'))
+        if (pos.y > groundLevel)
         {
-            pos += Vec3::UP() * speed * GetDTime();
+            velocity.y += gravity * GetDTime();
+            isGrounded = false;
         }
-        else if (g_Input->GetState('S'))
+        else
         {
-            pos -= Vec3::UP() * speed * GetDTime();
+            velocity.y = 0;
+            isGrounded = true;
         }
-    
+
+        velocity.x = 0;
+
+        float speed{ 60 };
+        if (isGrounded && g_Input->GetState('W'))
+        {
+            velocity.y = jumpVelocity;
+        }
+
         if (g_Input->GetState('D'))
         {
-            pos += Vec3::RIGHT() * speed * GetDTime();
+            velocity.x += speed * GetDTime();
         }
         else if (g_Input->GetState('A'))
         {
-            pos -= Vec3::RIGHT() * speed * GetDTime();
+            velocity.x -= speed * GetDTime();
         }
+
+        pos.x += velocity.x;
+        pos.y += velocity.y * GetDTime();
+
+        pos.y = Max(groundLevel, pos.y);
+
 
         Camera& cam = g_Render->GetCamera();
         cam.SetPosition(Vec2{ pos.x, pos.y } + (characters_.Tiles[0]->size_ / 2.0f)); // Center the camera pos at the center of the player
