@@ -44,17 +44,39 @@ struct AnimationState
 //------------------------------------------------------------------------------
 struct TileArchetype
 {
-    Array<Vec3> Positions;
-    Array<Tile*> Tiles;
+    Array<Vec3>     Positions;
+    Array<Tile*>    Tiles;
+};
+
+//------------------------------------------------------------------------------
+struct ObjectArchetype
+{
+    Array<Vec3>     Positions;
+    Array<Tile*>    Tiles;
+    Array<Box2D>    Colliders;
 };
 
 //------------------------------------------------------------------------------
 struct CharacterArchetype
 {
-    Array<Vec3> Positions;
-    Array<Tile*> Tiles;
-    Array<AnimationState> Animations;
-    Array<Box2D> Colliders;
+    Array<Vec3>             Positions;
+    Array<Tile*>            Tiles;
+    Array<AnimationState>   Animations;
+    Array<Box2D>            Colliders;
+};
+
+//------------------------------------------------------------------------------
+enum class ColliderTag
+{
+    None,
+    Ground
+};
+
+//------------------------------------------------------------------------------
+struct GroundArchetype
+{
+    Array<Box2D>        Colliders;
+    Array<ColliderTag>  Tags;
 };
 
 //------------------------------------------------------------------------------
@@ -95,11 +117,17 @@ private:
     Tile forestDoorTile_{};
 
     // Archetypes
-    TileArchetype tiles_{};
-    CharacterArchetype characters_{};
+    TileArchetype       tiles_{};
+    CharacterArchetype  characters_{};
+    GroundArchetype     ground_{};
+    ObjectArchetype     objects_{};
+
+    // Debug
+    bool visualizeColliders_{};
 
     void AddTile(const Vec3& pos, Tile* tile);
-    void AddAnimatedTile(const Vec3& pos, const AnimationState& animation);
+    void AddObject(const Vec3& pos, Tile* tile, const Box2D* collider);
+    void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
     void AnimateTiles();
     void DrawColliders();
 };

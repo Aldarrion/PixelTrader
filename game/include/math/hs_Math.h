@@ -19,6 +19,13 @@ inline constexpr NumberT Max(NumberT a, NumberT b)
 }
 
 //------------------------------------------------------------------------------
+template<class NumberT>
+inline constexpr NumberT Min(NumberT a, NumberT b)
+{
+    return a < b ? a : b;
+}
+
+//------------------------------------------------------------------------------
 inline constexpr uint Align(uint x, uint align)
 {
     hs_assert(align);
@@ -75,6 +82,9 @@ struct Vec4
 //------------------------------------------------------------------------------
 // Vector 2
 //------------------------------------------------------------------------------
+struct Vec2;
+constexpr inline Vec2 operator-(Vec2 a, Vec2 b);
+
 struct Vec2
 {
     union
@@ -99,6 +109,49 @@ struct Vec2
     static constexpr Vec2 ZERO()
     {
         return Vec2{ 0, 0 };
+    }
+
+    //------------------------------------------------------------------------------
+    static constexpr Vec2 UP()
+    {
+        return Vec2{ 0, 1 };
+    }
+
+    //------------------------------------------------------------------------------
+    static constexpr Vec2 RIGHT()
+    {
+        return Vec2{ 1, 0 };
+    }
+
+
+    //------------------------------------------------------------------------------
+    constexpr float Dot(Vec2 v) const
+    {
+        return x * v.x + y * v.y;
+    }
+
+    //------------------------------------------------------------------------------
+    constexpr float LengthSqr() const
+    {
+        return Dot(*this);
+    }
+
+    //------------------------------------------------------------------------------
+    float Length() const
+    {
+        return sqrt(LengthSqr());
+    }
+
+    //------------------------------------------------------------------------------
+    constexpr float DistanceSqr(Vec2 v) const
+    {
+        return (*this - v).LengthSqr();
+    }
+
+    //------------------------------------------------------------------------------
+    float Distance(Vec2 v) const
+    {
+        return sqrt(DistanceSqr(v));
     }
 
     //------------------------------------------------------------------------------
@@ -131,52 +184,64 @@ struct Vec2
         float r = (1 / t);
         return operator*=(r);
     }
+
+    //------------------------------------------------------------------------------
+    constexpr float& operator[](int i)
+    {
+        return v[i];
+    }
+
+    //------------------------------------------------------------------------------
+    constexpr const float operator[](int i) const
+    {
+        return v[i];
+    }
 };
 
 //------------------------------------------------------------------------------
-inline Vec2 operator*(float f, Vec2 v)
+constexpr inline Vec2 operator*(float f, Vec2 v)
 {
     return Vec2{ v.x * f, v.y * f };
 }
 
 //------------------------------------------------------------------------------
-inline Vec2 operator*(Vec2 v, float f)
+constexpr inline Vec2 operator*(Vec2 v, float f)
 {
     return f * v;
 }
 
 //------------------------------------------------------------------------------
-inline Vec2 operator/(Vec2 v, float f)
+constexpr inline Vec2 operator/(Vec2 v, float f)
 {
     return (1 / f) * v;
 }
 
 //------------------------------------------------------------------------------
-inline Vec2 operator+(Vec2 a, Vec2 b)
+constexpr inline Vec2 operator+(Vec2 a, Vec2 b)
 {
     return Vec2{ a.x + b.x, a.y + b.y };
 }
 
 //------------------------------------------------------------------------------
-inline Vec2 operator-(Vec2 a)
+constexpr inline Vec2 operator-(Vec2 a)
 {
     return Vec2{ -a.x , -a.y };
 }
 
 //------------------------------------------------------------------------------
-inline Vec2 operator-(Vec2 a, Vec2 b)
+constexpr inline Vec2 operator-(Vec2 a, Vec2 b)
 {
     return a + (-b);
 }
 
 //------------------------------------------------------------------------------
-inline bool operator==(Vec2 a, Vec2 b)
+constexpr inline bool operator==(Vec2 a, Vec2 b)
 {
     return a.x == b.x && a.y == b.y;
 }
 
 //------------------------------------------------------------------------------
-inline bool operator!=(Vec2 a, Vec2 b)
+constexpr inline bool operator!=(Vec2 a, Vec2 b)
 {
     return !(a == b);
 }
@@ -625,7 +690,19 @@ struct Box2D
         , max_(max)
     {
     }
+
+    Box2D Offset(Vec2 pos) const
+    {
+        Box2D result(min_ + pos, max_ + pos);
+        return result;
+    }
 };
+
+//------------------------------------------------------------------------------
+inline Box2D MakeBox2DPosSize(Vec2 min, Vec2 size)
+{
+    return Box2D(min, min + size);
+}
 
 //------------------------------------------------------------------------------
 constexpr inline bool IsIntersecting(const Box2D& a, const Box2D& b)
@@ -636,6 +713,63 @@ constexpr inline bool IsIntersecting(const Box2D& a, const Box2D& b)
         return false;
 
     return true;
+}
+
+struct IntersectionResult
+{
+    float   tFirst_;
+    float   tLast_;
+    Vec2    normal_;
+    bool    isIntersecting_;
+};
+
+//------------------------------------------------------------------------------
+//! Intersection of stationary AABB a and moving AABB b with velocity velocityB
+constexpr inline IntersectionResult IsIntersecting(const Box2D& a, const Box2D& b, Vec2 velocityB)
+{
+    IntersectionResult result{};
+
+    // Early escape to be sure we are not intersecting already
+    if (IsIntersecting(a, b))
+    {
+        result.isIntersecting_ = true;
+        return result;
+    }
+
+    result.tFirst_ = 0.0f;
+    result.tLast_ = 1.0f;
+
+    // Separating axis test with moving objects
+    for (int i = 0; i < 2; ++i)
+    {
+        if (velocityB[i] <= 0.0f)
+        {
+            if (b.max_[i] < a.min_[i]) return result; // Nonintersecting and moving apart
+            if (a.max_[i] < b.min_[i]) result.tFirst_ = Max((a.max_[i] - b.min_[i]) / velocityB[i], result.tFirst_); // B is to the "right" of A
+            if (b.max_[i] > a.min_[i]) result.tLast_  = Min((a.min_[i] - b.max_[i]) / velocityB[i], result.tLast_); // B is intersecting A
+        }
+        if (velocityB[i] > 0.0f)
+        {
+            if (b.min_[i] > a.max_[i]) return result; // Nonintersecting and moving apart
+            if (b.max_[i] < a.min_[i]) result.tFirst_ = Max((a.min_[i] - b.max_[i]) / velocityB[i], result.tFirst_); // B is to the "left" of A
+            if (a.max_[i] > b.min_[i]) result.tLast_  = Min((a.max_[i] - b.min_[i]) / velocityB[i], result.tLast_); // B is intersecting A
+        }
+
+        // We found a separating axis, objects are not intersecting
+        if (result.tFirst_ > result.tLast_)
+            return result;
+    }
+
+    result.isIntersecting_ = true;
+    return result;
+}
+
+//------------------------------------------------------------------------------
+//! Intersection of moving AABBs a and b with velocities velocityA and velocityB
+constexpr inline IntersectionResult IsIntersecting(const Box2D& a, const Box2D& b, Vec2 velocityA, Vec2 velocityB)
+{
+    Vec2 totalVelocity = velocityB - velocityA;
+    return IsIntersecting(a, b, totalVelocity);
 }
 
 
