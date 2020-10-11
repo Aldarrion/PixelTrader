@@ -84,6 +84,7 @@ struct Vec4
 //------------------------------------------------------------------------------
 struct Vec2;
 constexpr inline Vec2 operator-(Vec2 a, Vec2 b);
+constexpr inline Vec2 operator*(Vec2 v, float f);
 
 struct Vec2
 {
@@ -140,6 +141,21 @@ struct Vec2
     float Length() const
     {
         return sqrt(LengthSqr());
+    }
+
+    //------------------------------------------------------------------------------
+    void Normalize()
+    {
+        float lenRec = 1.0f / Length();
+        x *= lenRec;
+        y *= lenRec;
+    }
+
+    //------------------------------------------------------------------------------
+    Vec2 Normalized() const
+    {
+        float lenRec = 1.0f / Length();
+        return (*this) * lenRec;
     }
 
     //------------------------------------------------------------------------------
@@ -381,11 +397,25 @@ struct Vec3
     }
 
     //------------------------------------------------------------------------------
-    Vec2 XY() const
+    constexpr Vec2 XY() const
     {
         return Vec2{ x, y };
     }
+
+    //------------------------------------------------------------------------------
+    constexpr Vec3 AddXY(Vec2 xy)
+    {
+        x += xy.x;
+        y += xy.y;
+        return *this;
+    }
 };
+
+//------------------------------------------------------------------------------
+inline Vec3 XYZ(Vec4 v)
+{
+    return Vec3(v.x, v.y, v.z);
+}
 
 //------------------------------------------------------------------------------
 inline Vec3 operator+(const Vec3& a, const Vec3& b)
@@ -434,17 +464,6 @@ inline Vec3 operator/(const Vec3& v, float t)
 //------------------------------------------------------------------------------
 struct Mat44
 {
-    static Mat44 Identity()
-    {
-        return Mat44
-        (
-            Vec4{ 1, 0, 0, 0 },
-            Vec4{ 0, 1, 0, 0 },
-            Vec4{ 0, 0, 1, 0 },
-            Vec4{ 0, 0, 0, 1 }
-        );
-    }
-
     union
     {
         float m[4][4];
@@ -456,6 +475,40 @@ struct Mat44
             Vec4 pos;
         };
     };
+
+    static Mat44 Identity()
+    {
+        return Mat44
+        (
+            Vec4{ 1, 0, 0, 0 },
+            Vec4{ 0, 1, 0, 0 },
+            Vec4{ 0, 0, 1, 0 },
+            Vec4{ 0, 0, 0, 1 }
+        );
+    }
+
+    //------------------------------------------------------------------------------
+    static Mat44 RotationRoll(float roll)
+    {
+        float c = cosf(roll);
+        float s = sinf(roll);
+        Mat44 rot(
+            c,  s, 0, 0,
+            -s, c, 0, 0,
+            0,  0, 1, 0,
+            0,  0, 0, 1
+        );
+
+        return rot;
+    }
+
+    //------------------------------------------------------------------------------
+    static Mat44 Translation(Vec3 pos)
+    {
+        Mat44 translation = Mat44::Identity();
+        translation.SetPosition(pos);
+        return translation;
+    }
 
     //------------------------------------------------------------------------------
     Mat44() = default;
@@ -504,6 +557,81 @@ struct Mat44
     void SetPosition(const Vec3& position)
     {
         pos = Vec4{ position.x, position.y, position.z, 1 };
+    }
+
+    //------------------------------------------------------------------------------
+    Mat44 GetInverse() const
+    {
+        const Vec3 a(XYZ(a));
+        const Vec3 b(XYZ(b));
+        const Vec3 c(XYZ(c));
+        const Vec3 d(XYZ(pos));
+
+        const float x = (*this)(0, 3);
+        const float y = (*this)(1, 3);
+        const float z = (*this)(2, 3);
+        const float w = (*this)(3, 3);
+
+        Vec3 s = a.Cross(b);
+        Vec3 t = c.Cross(d);
+        Vec3 u = a * y - b * x;
+        Vec3 v = c * w - d * z;
+
+        const float det = s.Dot(v) + t.Dot(u);
+        hs_assert(det && "Matrix must be regular");
+
+        const float invDet = 1.0f / det;
+        s *= invDet;
+        t *= invDet;
+        u *= invDet;
+        v *= invDet;
+
+        const Vec3 r0 = b.Cross(v) + t * y;
+        const Vec3 r1 = v.Cross(a) - t * x;
+        const Vec3 r2 = d.Cross(u) + s * w;
+        const Vec3 r3 = u.Cross(c) - s * z;
+
+        const Mat44 inverse(
+            r0.x, r1.x, r2.x, r3.x,
+            r0.y, r1.y, r2.y, r3.y,
+            r0.z, r1.z, r2.z, r3.z,
+            -b.Dot(t), a.Dot(t), -d.Dot(s), c.Dot(s)
+        );
+
+        return inverse;
+    }
+
+    //------------------------------------------------------------------------------
+    Mat44 GetInverseTransform() const
+    {
+        const Vec3 a(XYZ(a));
+        const Vec3 b(XYZ(b));
+        const Vec3 c(XYZ(c));
+        const Vec3 d(XYZ(pos));
+
+        Vec3 s = a.Cross(b);
+        Vec3 t = c.Cross(d);
+
+        const float det = s.Dot(c);
+        hs_assert(det && "Matrix must be regular");
+
+        const float invDet = 1.0f / det;
+
+        s *= invDet;
+        t *= invDet;
+        const Vec3 v = c * invDet;
+
+        const Vec3 r0 = b.Cross(v);
+        const Vec3 r1 = v.Cross(a);
+
+        const Mat44 inverse(
+            r0.x, r1.x, s.x,                0,
+            r0.y, r1.y, s.y,                0,
+            r0.z, r1.z, s.z,                0,
+            -b.Dot(t), a.Dot(t), -d.Dot(s), 1
+        );
+
+        return inverse;
     }
 };
 
@@ -685,23 +813,24 @@ struct Box2D
     Vec2 max_;
 
     Box2D() = default;
-    Box2D(Vec2 min, Vec2 max)
-        : min_(min)
-        , max_(max)
-    {
-    }
 
     Box2D Offset(Vec2 pos) const
     {
-        Box2D result(min_ + pos, max_ + pos);
+        Box2D result{ min_ + pos, max_ + pos };
         return result;
     }
 };
 
 //------------------------------------------------------------------------------
+inline Box2D MakeBox2DMinMax(Vec2 min, Vec2 max)
+{
+    return Box2D{ min, max };
+}
+
+//------------------------------------------------------------------------------
 inline Box2D MakeBox2DPosSize(Vec2 min, Vec2 size)
 {
-    return Box2D(min, min + size);
+    return Box2D{ min, min + size };
 }
 
 //------------------------------------------------------------------------------

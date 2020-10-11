@@ -26,15 +26,15 @@ void TileRenderer::ClearTiles()
 }
 
 //------------------------------------------------------------------------------
-void TileRenderer::AddTile(Tile* tile, Vec3 position)
+void TileRenderer::AddTile(Tile* tile, Vec3 position, float rotation, Vec2 pivot)
 {
-    const Box2D tileBoundBox(Vec2(position.x, position.y), Vec2(position.x + tile->size_.x, position.y + tile->size_.y));
+    const Box2D tileBoundBox = MakeBox2DMinMax(Vec2(position.x, position.y), Vec2(position.x + tile->size_.x, position.y + tile->size_.y));
     const Box2D frustum = g_Render->GetCamera().GetOrthoFrustum();
 
     if (!IsIntersecting(tileBoundBox, frustum))
         return;
 
-    drawCalls_.Add(TileDrawCall{ tile, position });
+    drawCalls_.Add(TileDrawCall{ tile, position, rotation, pivot });
 }
 
 //------------------------------------------------------------------------------
@@ -65,7 +65,9 @@ void TileRenderer::Draw()
             drawCalls_[i].tile_->texture_,
             drawCalls_[i].tile_->uvBox_,
             drawCalls_[i].tile_->size_,
-            drawCalls_[i].position_
+            drawCalls_[i].position_,
+            drawCalls_[i].rotation_,
+            drawCalls_[i].pivot_
         });
     }
 }

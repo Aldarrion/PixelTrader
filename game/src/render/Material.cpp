@@ -9,6 +9,9 @@
 #include "input/Input.h"
 
 #include "render/hs_Image.h"
+
+#include "Common.h"
+
 #include <string>
 
 namespace hs
@@ -87,22 +90,15 @@ uint PosColVertLayout()
 }
 
 //------------------------------------------------------------------------------
-struct SceneData
-{
-    Mat44   Projection;
-    Vec4    ViewPos;
-};
-
-//------------------------------------------------------------------------------
 void SetSceneData()
 {
     void* mapped;
-    DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(SceneData), &mapped);
-    auto ubo = (SceneData*)mapped;
+    DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::SceneData), &mapped);
+    auto ubo = (sh::SceneData*)mapped;
 
     Mat44 camMat = g_Render->GetCamera().ToCamera();
     Mat44 projMat = camMat * g_Render->GetCamera().ToProjection();
-    ubo->Projection = projMat;
+    ubo->VP = projMat;
 
     g_Render->GetUBOCache()->EndAlloc();
     g_Render->SetDynamicUbo(1, constBuffer);
@@ -140,55 +136,57 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         TileVertex* mapped{};
         VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(6 * sizeof(TileVertex), sizeof(TileVertex), (void**)&mapped);
 
+        Vec3 vertPos = Vec3::ZERO();
+
         mapped[0].position_ = Vec4{
-            data.pos_.x,
-            data.pos_.y,
-            data.pos_.z,
+            vertPos.x,
+            vertPos.y,
+            vertPos.z,
             1 
         };
         mapped[0].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[0].color_ = 0xffffffff;
 
         mapped[1].position_ = Vec4{
-            data.size_.x + data.pos_.x,
-            data.pos_.y,
-            data.pos_.z,
+            data.size_.x + vertPos.x,
+            vertPos.y,
+            vertPos.z,
             1 
         };
         mapped[1].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y + data.uvBox_.w };
         mapped[1].color_ = 0xffffffff;
 
         mapped[2].position_ = Vec4{
-            data.size_.x + data.pos_.x,
-            data.size_.y + data.pos_.y,
-            data.pos_.z,
+            data.size_.x + vertPos.x,
+            data.size_.y + vertPos.y,
+            vertPos.z,
             1
         };
         mapped[2].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
         mapped[2].color_ = 0xffffffff;
 
         mapped[3].position_ = Vec4{
-            data.pos_.x,
-            data.pos_.y,
-            data.pos_.z,
+            vertPos.x,
+            vertPos.y,
+            vertPos.z,
             1
         };
         mapped[3].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[3].color_ = 0xffffffff;
 
         mapped[4].position_ = Vec4{
-            data.size_.x + data.pos_.x,
-            data.size_.y + data.pos_.y,
-            data.pos_.z,
+            data.size_.x + vertPos.x,
+            data.size_.y + vertPos.y,
+            vertPos.z,
             1
         };
         mapped[4].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y };
         mapped[4].color_ = 0xffffffff;
 
         mapped[5].position_ = Vec4{
-            data.pos_.x,
-            data.size_.y + data.pos_.y,
-            data.pos_.z,
+            vertPos.x,
+            data.size_.y + vertPos.y,
+            vertPos.z,
             1
         };
         mapped[5].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y };
@@ -197,6 +195,23 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         g_Render->GetVertexCache()->EndAlloc();
         
         g_Render->SetVertexBuffer(0, vbEntry);
+    }
+
+    {
+        Mat44 model = Mat44::RotationRoll(data.rotation_);
+        model.SetPosition(data.pos_);
+        Mat44 pivotOffset = Mat44::Translation(-Vec3(data.pivot_.x, data.pivot_.y, 0));
+        model = pivotOffset * model;
+
+        void* mapped;
+        DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::TileData), &mapped);
+        auto ubo = (sh::TileData*)mapped;
+
+
+        ubo->Model = model;
+
+        g_Render->GetUBOCache()->EndAlloc();
+        g_Render->SetDynamicUbo(2, constBuffer);
     }
 
     SetSceneData();

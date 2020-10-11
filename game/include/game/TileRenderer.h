@@ -22,6 +22,8 @@ struct TileDrawCall
 {
     Tile* tile_;
     Vec3 position_;
+    float rotation_;
+    Vec2 pivot_;
 };
 
 //------------------------------------------------------------------------------
@@ -32,7 +34,7 @@ public:
     void Draw();
 
     void ClearTiles();
-    void AddTile(Tile* tile, Vec3 position);
+    void AddTile(Tile* tile, Vec3 position, float rotation = 0.0f, Vec2 pivot = Vec2::ZERO());
 
 private:
     TileMaterial tileMaterial_;

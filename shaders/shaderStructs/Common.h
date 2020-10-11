@@ -1,7 +1,7 @@
 #ifdef __cplusplus
 #pragma once
 
-#include "hs_Math.h"
+#include "math/hs_Math.h"
 
 namespace hs
 {
@@ -24,12 +24,23 @@ namespace hs
     #define GetTex2D(x) BindlessTex2D[BindingIdx(0)]
 #endif
 
-struct SceneCb
+#ifdef __cplusplus
+namespace sh
+{
+#endif
+
+struct SceneData
 {
     Mat44   VP;
     Vec4    ViewPos;
 };
 
+struct TileData
+{
+    Mat44 Model;
+};
+
 #ifdef __cplusplus
+} // namespace shaders
 }
 #endif

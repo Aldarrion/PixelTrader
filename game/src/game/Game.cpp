@@ -104,6 +104,17 @@ void Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const 
 }
 
 //------------------------------------------------------------------------------
+void Game::AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Box2D& collider, Vec2 velocity)
+{
+    projectiles_.Positions.Add(pos);
+    projectiles_.Pivots.Add(pivot);
+    projectiles_.Rotations.Add(rotation);
+    projectiles_.Tiles.Add(tile);
+    projectiles_.Colliders.Add(collider);
+    projectiles_.Velocities.Add(velocity);
+}
+
+//------------------------------------------------------------------------------
 void Game::AnimateTiles()
 {
     for (int i = 0; i < characters_.Animations.Count(); ++i)
@@ -148,6 +159,11 @@ void Game::DrawColliders()
     for (int i = 0; i < objects_.Colliders.Count(); ++i)
     {
         DrawCollider(objects_.Colliders[i].Offset(objects_.Positions[i].XY()));
+    }
+
+    for (int i = 0; i < projectiles_.Colliders.Count(); ++i)
+    {
+        DrawCollider(projectiles_.Colliders[i].Offset(projectiles_.Positions[i].XY() - projectiles_.Pivots[i]));
     }
 }
 
@@ -208,6 +224,9 @@ RESULT Game::InitWin32()
     if (HS_FAILED(MakeSimpleTile("textures/Rock2.png", rockTile_[1])))
         return R_FAIL;
 
+    if (HS_FAILED(MakeSimpleTile("textures/Arrow.png", arrowTile_)))
+        return R_FAIL;
+
     Array<AnimationSegment> rockIdleSegments;
     for (uint i = 0; i < hs_arr_len(rockTile_); ++i)
         rockIdleSegments.Add(AnimationSegment{ &rockTile_[i], 0.5f });
@@ -218,7 +237,7 @@ RESULT Game::InitWin32()
 
     // ------------------------
     // Create initial map state
-    Box2D chestCollider(Vec2(3, 1), Vec2(29, 25));
+    Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
     AddObject(TilePos(0, 0.5f, 1), &goldChestTile_, &chestCollider);
 
     int left = -6;
@@ -254,7 +273,7 @@ RESULT Game::InitWin32()
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
     AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
 
-    Box2D groundCollider(Vec2(left * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width) * TILE_SIZE, 9));
+    Box2D groundCollider = MakeBox2DMinMax(Vec2(left * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width) * TILE_SIZE, 9));
     ground_.Colliders.Add(groundCollider);
     ground_.Tags.Add(ColliderTag::Ground);
 
@@ -268,6 +287,11 @@ float jumpVelocity = (2 * height) / (timeToJump);
 float gravity = (-2 * height) / Sqr(timeToJump);
 Vec2 velocity = Vec2::ZERO();
 float groundLevel = 8;
+
+constexpr float SHOOT_COOLDOWN = 1.0f;
+float timeToShoot;
+float projectileGravity = gravity / 10;
+float projectileSpeed = 150.0f;
 
 //------------------------------------------------------------------------------
 Vec2 ClosestNormal(const Box2D& a, const Box2D& b)
@@ -303,6 +327,34 @@ Vec2 ClosestNormal(const Box2D& a, const Box2D& b)
     }
 
     return normal;
+}
+
+//------------------------------------------------------------------------------
+Vec2 CursorToWorld()
+{
+    const Camera& cam = g_Render->GetCamera();
+    Mat44 worldToProj = cam.ToCamera() * cam.ToProjection();
+    Mat44 projToWorld = worldToProj.GetInverseTransform();
+
+    Vec2 wndSize = g_Render->GetDimensions();
+    Vec2 mousePos = g_Input->GetMousePos();
+    Vec4 ndcMouse((mousePos.x / wndSize.x) * 2 - 1, (1 - (mousePos.y / wndSize.y)) * 2 - 1, 0, 1);
+
+    Vec4 worldMouse = ndcMouse * projToWorld;
+
+    return Vec2(worldMouse.x, worldMouse.y);
+}
+
+//------------------------------------------------------------------------------
+float RotationFromDirection(Vec2 dirNormalized)
+{
+    float dotX = dirNormalized.Dot(Vec2::RIGHT());
+    float dotY = dirNormalized.Dot(Vec2::UP());
+    float angle = acosf(dotX);
+    if (dotY < 0)
+        angle = HS_TAU - angle;
+
+    return angle;
 }
 
 //------------------------------------------------------------------------------
@@ -396,6 +448,42 @@ void Game::Update(float dTime)
         cam.UpdateMatrics();
     }
 
+    // Shooting
+    {
+        timeToShoot = Max(timeToShoot - dTime, 0.0f);
+        if (g_Input->IsButtonDown(BTN_LEFT))
+        {
+            timeToShoot = SHOOT_COOLDOWN;
+
+            Vec2 to = CursorToWorld();
+            Vec2 projPos = characters_.Positions[0].XY() + characters_.Tiles[0]->size_ / 2;
+            Vec2 dir(to - projPos);
+            dir.Normalize();
+
+            float angle = RotationFromDirection(dir);
+
+            AddProjectile(
+                Vec3(projPos.x, projPos.y, 0.5f),
+                arrowTile_.size_ / 2,
+                angle,
+                &arrowTile_,
+                MakeBox2DPosSize(Vec2::ZERO(), arrowTile_.size_),
+                dir *= projectileSpeed
+            );
+        }
+
+        // Move projectiles
+        {
+            for (int i = 0; i < projectiles_.Positions.Count(); ++i)
+            {
+                projectiles_.Velocities[i].y += projectileGravity * GetDTime();
+                projectiles_.Positions[i].AddXY(projectiles_.Velocities[i] * GetDTime());
+
+                projectiles_.Rotations[i] = RotationFromDirection(projectiles_.Velocities[i].Normalized());
+            }
+        }
+    }
+
     AnimateTiles();
 
     // Draw calls
@@ -418,6 +506,18 @@ void Game::Update(float dTime)
     for (int i = 0; i < characters_.Tiles.Count(); ++i)
     {
         tr->AddTile(characters_.Tiles[i], characters_.Positions[i]);
+    }
+
+    // Projectiles
+    for (int i = 0; i < projectiles_.Tiles.Count(); ++i)
+    {
+        Vec2 pos = projectiles_.Positions[i].XY() - projectiles_.Pivots[i];
+        tr->AddTile(
+            projectiles_.Tiles[i],
+            Vec3(pos.x, pos.y, projectiles_.Positions[i].z),
+            projectiles_.Rotations[i],
+            projectiles_.Pivots[i]
+        );
     }
 
     DrawColliders();

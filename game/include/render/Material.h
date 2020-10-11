@@ -28,6 +28,8 @@ struct TileDrawData
     Vec4 uvBox_;
     Vec2 size_;
     Vec3 pos_;
+    float rotation_;
+    Vec2 pivot_;
 };
 
 //------------------------------------------------------------------------------

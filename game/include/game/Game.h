@@ -66,6 +66,17 @@ struct CharacterArchetype
 };
 
 //------------------------------------------------------------------------------
+struct ProjectileArchetype
+{
+    Array<Vec3>     Positions;
+    Array<float>    Rotations;
+    Array<Vec2>     Pivots; // TODO(pavel): Move this to Tile?
+    Array<Tile*>    Tiles;
+    Array<Box2D>    Colliders;
+    Array<Vec2>     Velocities;
+};
+
+//------------------------------------------------------------------------------
 enum class ColliderTag
 {
     None,
@@ -115,12 +126,14 @@ private:
     Tile rockTile_[2]{};
     Tile forestTile_{};
     Tile forestDoorTile_{};
+    Tile arrowTile_{};
 
     // Archetypes
     TileArchetype       tiles_{};
     CharacterArchetype  characters_{};
     GroundArchetype     ground_{};
     ObjectArchetype     objects_{};
+    ProjectileArchetype projectiles_{};
 
     // Debug
     bool visualizeColliders_{};
@@ -128,6 +141,8 @@ private:
     void AddTile(const Vec3& pos, Tile* tile);
     void AddObject(const Vec3& pos, Tile* tile, const Box2D* collider);
     void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
+    void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Box2D& collider, Vec2 velocity);
+
     void AnimateTiles();
     void DrawColliders();
 };

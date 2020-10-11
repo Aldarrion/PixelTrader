@@ -93,7 +93,7 @@ void Camera::SetPosition(const Vec2& pos)
 Box2D Camera::GetOrthoFrustum() const
 {
     const Vec2 extents = Vec2(extent_, extent_ / g_Render->GetAspect());
-    const Box2D frustum(
+    const Box2D frustum = MakeBox2DMinMax(
         Vec2(pos_.x - extents.x, pos_.y - extents.y),
         Vec2(pos_.x + extents.x, pos_.y + extents.y)
     );

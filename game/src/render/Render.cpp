@@ -763,6 +763,9 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     uboBindings[1] = uboBindings[0];
     uboBindings[1].binding             = 1;
 
+    uboBindings[2] = uboBindings[0];
+    uboBindings[2].binding             = 2;
+
     VkDescriptorSetLayoutCreateInfo dynamicUbo{};
     dynamicUbo.sType           = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     dynamicUbo.bindingCount    = hs_arr_len(uboBindings);
@@ -1172,7 +1175,7 @@ RESULT Render::PrepareForDraw()
     uint dynOffsets[DYNAMIC_UBO_COUNT + 1]{};
     dynOffsets[0] = state_.bindlessUBO_.dynOffset_;
     
-    VkWriteDescriptorSet UBOWrites[2]{};
+    VkWriteDescriptorSet UBOWrites[DYNAMIC_UBO_COUNT + 1]{};
     UBOWrites[0].sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     UBOWrites[0].dstSet             = state_.uboDescSet_;
     UBOWrites[0].dstBinding         = 0;
@@ -1183,22 +1186,25 @@ RESULT Render::PrepareForDraw()
 
     uint writeCount = 1;
 
-    if (state_.dynamicUBOs_[0].buffer_)
+    for (int i = 0; i < DYNAMIC_UBO_COUNT; ++i)
     {
-        buffInfo[1].buffer = state_.dynamicUBOs_[0].buffer_;
-        buffInfo[1].offset = 0;
-        buffInfo[1].range  = state_.dynamicUBOs_[0].size_;
+        if (state_.dynamicUBOs_[i].buffer_)
+        {
+            buffInfo[i + 1].buffer = state_.dynamicUBOs_[i].buffer_;
+            buffInfo[i + 1].offset = 0;
+            buffInfo[i + 1].range  = state_.dynamicUBOs_[i].size_;
 
-        dynOffsets[1] = state_.dynamicUBOs_[0].dynOffset_;
+            dynOffsets[i + 1] = state_.dynamicUBOs_[i].dynOffset_;
 
-        ++writeCount;
-        UBOWrites[1].sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        UBOWrites[1].dstSet             = state_.uboDescSet_;
-        UBOWrites[1].dstBinding         = 1;
-        UBOWrites[1].dstArrayElement    = 0;
-        UBOWrites[1].descriptorCount    = 1;
-        UBOWrites[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        UBOWrites[1].pBufferInfo        = &buffInfo[1];
+            ++writeCount;
+            UBOWrites[i + 1].sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            UBOWrites[i + 1].dstSet             = state_.uboDescSet_;
+            UBOWrites[i + 1].dstBinding         = i + 1;
+            UBOWrites[i + 1].dstArrayElement    = 0;
+            UBOWrites[i + 1].descriptorCount    = 1;
+            UBOWrites[i + 1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            UBOWrites[i + 1].pBufferInfo        = &buffInfo[i + 1];
+        }
     }
 
 
@@ -1448,6 +1454,11 @@ uint Render::GetHeight() const
 float Render::GetAspect() const
 {
     return 1.0f * width_ / height_;
+}
+
+Vec2 Render::GetDimensions() const
+{
+    return Vec2(width_, height_);
 }
 
 //------------------------------------------------------------------------------

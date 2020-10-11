@@ -38,7 +38,7 @@ namespace hs
 //------------------------------------------------------------------------------
 static constexpr uint SRV_SLOT_COUNT = 8;
 static constexpr uint IMMUTABLE_SAMPLER_COUNT = 1;
-static constexpr uint DYNAMIC_UBO_COUNT = 1;
+static constexpr uint DYNAMIC_UBO_COUNT = 2;
 
 //------------------------------------------------------------------------------
 extern class Render* g_Render;
@@ -154,6 +154,7 @@ public:
     uint GetWidth() const;
     uint GetHeight() const;
     float GetAspect() const;
+    Vec2 GetDimensions() const;
 
     void ResetState();
 
