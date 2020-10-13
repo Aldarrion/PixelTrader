@@ -77,6 +77,14 @@ struct ProjectileArchetype
 };
 
 //------------------------------------------------------------------------------
+struct TargetArchetype
+{
+    Array<Vec3>     Positions;
+    Array<Circle>   Colliders;
+    Array<Tile*>    Tiles;
+};
+
+//------------------------------------------------------------------------------
 enum class ColliderTag
 {
     None,
@@ -127,6 +135,7 @@ private:
     Tile forestTile_{};
     Tile forestDoorTile_{};
     Tile arrowTile_{};
+    Tile targetTile_{};
 
     // Archetypes
     TileArchetype       tiles_{};
@@ -134,6 +143,7 @@ private:
     GroundArchetype     ground_{};
     ObjectArchetype     objects_{};
     ProjectileArchetype projectiles_{};
+    TargetArchetype     targets_{};
 
     // Debug
     bool visualizeColliders_{};
@@ -142,6 +152,7 @@ private:
     void AddObject(const Vec3& pos, Tile* tile, const Box2D* collider);
     void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
     void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Box2D& collider, Vec2 velocity);
+    void AddTarget(const Vec3& pos, Tile* tile, const Circle& collider);
 
     void AnimateTiles();
     void DrawColliders();

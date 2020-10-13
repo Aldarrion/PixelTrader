@@ -115,6 +115,14 @@ void Game::AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile
 }
 
 //------------------------------------------------------------------------------
+void Game::AddTarget(const Vec3& pos, Tile* tile,  const Circle& collider)
+{
+    targets_.Positions.Add(pos);
+    targets_.Colliders.Add(collider);
+    targets_.Tiles.Add(tile);
+}
+
+//------------------------------------------------------------------------------
 void Game::AnimateTiles()
 {
     for (int i = 0; i < characters_.Animations.Count(); ++i)
@@ -135,7 +143,7 @@ void Game::DrawColliders()
     if (!visualizeColliders_)
         return;
 
-    auto DrawCollider = [](const Box2D& collider)
+    auto DrawBox = [](const Box2D& collider)
     {
         Vec3 verts[5];
         verts[0] = verts[4] = Vec3(collider.min_.x, collider.min_.y, 0);
@@ -146,24 +154,45 @@ void Game::DrawColliders()
         g_Render->GetDebugShapeRenderer()->AddShape(MakeSpan(verts), COLLIDER_COLOR);
     };
 
+    auto DrawCircle = [](const Circle& collider)
+    {
+        constexpr uint VERT_COUNT = 32;
+        Vec3 verts[VERT_COUNT];
+        constexpr float step = HS_TAU / (VERT_COUNT - 1);
+
+        for (int i = 0; i < VERT_COUNT; ++i)
+        {
+            float x = cosf(step * i) * collider.radius_;
+            float y = sinf(step * i) * collider.radius_;
+            verts[i] = Vec3(collider.center_.x + x, collider.center_.y + y, 0);
+        }
+
+        g_Render->GetDebugShapeRenderer()->AddShape(MakeSpan(verts), COLLIDER_COLOR);
+    };
+
     for (int i = 0; i < characters_.Colliders.Count(); ++i)
     {
-        DrawCollider(characters_.Colliders[i].Offset(characters_.Positions[i].XY()));
+        DrawBox(characters_.Colliders[i].Offset(characters_.Positions[i].XY()));
     }
 
     for (int i = 0; i < ground_.Colliders.Count(); ++i)
     {
-        DrawCollider(ground_.Colliders[i]);
+        DrawBox(ground_.Colliders[i]);
     }
 
     for (int i = 0; i < objects_.Colliders.Count(); ++i)
     {
-        DrawCollider(objects_.Colliders[i].Offset(objects_.Positions[i].XY()));
+        DrawBox(objects_.Colliders[i].Offset(objects_.Positions[i].XY()));
     }
 
     for (int i = 0; i < projectiles_.Colliders.Count(); ++i)
     {
-        DrawCollider(projectiles_.Colliders[i].Offset(projectiles_.Positions[i].XY() - projectiles_.Pivots[i]));
+        DrawBox(projectiles_.Colliders[i].Offset(projectiles_.Positions[i].XY() - projectiles_.Pivots[i]));
+    }
+
+    for (int i = 0; i < targets_.Colliders.Count(); ++i)
+    {
+        DrawCircle(targets_.Colliders[i].Offset(targets_.Positions[i].XY()));
     }
 }
 
@@ -227,6 +256,9 @@ RESULT Game::InitWin32()
     if (HS_FAILED(MakeSimpleTile("textures/Arrow.png", arrowTile_)))
         return R_FAIL;
 
+    if (HS_FAILED(MakeSimpleTile("textures/Target.png", targetTile_)))
+        return R_FAIL;
+
     Array<AnimationSegment> rockIdleSegments;
     for (uint i = 0; i < hs_arr_len(rockTile_); ++i)
         rockIdleSegments.Add(AnimationSegment{ &rockTile_[i], 0.5f });
@@ -239,6 +271,8 @@ RESULT Game::InitWin32()
     // Create initial map state
     Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
     AddObject(TilePos(0, 0.5f, 1), &goldChestTile_, &chestCollider);
+
+    AddTarget(TilePos(5, 5, 2.5f), &targetTile_, Circle(targetTile_.size_ / 2.0f, 8));
 
     int left = -6;
     int width = 15;
@@ -518,6 +552,12 @@ void Game::Update(float dTime)
             projectiles_.Rotations[i],
             projectiles_.Pivots[i]
         );
+    }
+
+    // Targets
+    for (int i = 0; i < targets_.Tiles.Count(); ++i)
+    {
+        tr->AddTile(targets_.Tiles[i], targets_.Positions[i]);
     }
 
     DrawColliders();

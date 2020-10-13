@@ -844,6 +844,7 @@ constexpr inline bool IsIntersecting(const Box2D& a, const Box2D& b)
     return true;
 }
 
+//------------------------------------------------------------------------------
 struct IntersectionResult
 {
     float   tFirst_;
@@ -900,6 +901,25 @@ constexpr inline IntersectionResult IsIntersecting(const Box2D& a, const Box2D& 
     Vec2 totalVelocity = velocityB - velocityA;
     return IsIntersecting(a, b, totalVelocity);
 }
+
+//------------------------------------------------------------------------------
+struct Circle
+{
+    Vec2    center_;
+    float   radius_;
+
+    Circle(Vec2 center, float radius)
+        : center_(center)
+        , radius_(radius)
+    {
+    }
+
+    Circle Offset(Vec2 pos) const
+    {
+        Circle result(center_ + pos, radius_);
+        return result;
+    }
+};
 
 
 }
