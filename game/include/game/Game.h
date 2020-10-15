@@ -72,8 +72,8 @@ struct ProjectileArchetype
     Array<float>    Rotations;
     Array<Vec2>     Pivots; // TODO(pavel): Move this to Tile?
     Array<Tile*>    Tiles;
-    Array<Box2D>    Colliders;
     Array<Vec2>     Velocities;
+    Array<Circle>   TipColliders;
 };
 
 //------------------------------------------------------------------------------
@@ -151,8 +151,13 @@ private:
     void AddTile(const Vec3& pos, Tile* tile);
     void AddObject(const Vec3& pos, Tile* tile, const Box2D* collider);
     void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
-    void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Box2D& collider, Vec2 velocity);
+
+    void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Circle& tipCollider, Vec2 velocity);
+    void RemoveProjectile(uint idx);
+
     void AddTarget(const Vec3& pos, Tile* tile, const Circle& collider);
+    void RemoveTarget(uint idx);
+
 
     void AnimateTiles();
     void DrawColliders();

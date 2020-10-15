@@ -37,7 +37,7 @@ struct SceneData
 
 struct TileData
 {
-    Mat44 Model;
+    Mat44 World;
 };
 
 #ifdef __cplusplus

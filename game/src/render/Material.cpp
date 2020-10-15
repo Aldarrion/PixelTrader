@@ -198,20 +198,16 @@ void TileMaterial::DrawTile(const TileDrawData& data)
     }
 
     {
-        Mat44 model = Mat44::RotationRoll(data.rotation_);
-        model.SetPosition(data.pos_);
-        Mat44 pivotOffset = Mat44::Translation(-Vec3(data.pivot_.x, data.pivot_.y, 0));
-        model = pivotOffset * model;
+        Mat44 world = MakeTransform(data.rotation_, data.pivot_, data.pos_);
 
         void* mapped;
-        DynamicUBOEntry constBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::TileData), &mapped);
+        DynamicUBOEntry uniformBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::TileData), &mapped);
+
         auto ubo = (sh::TileData*)mapped;
-
-
-        ubo->Model = model;
-
+            ubo->World = world;
         g_Render->GetUBOCache()->EndAlloc();
-        g_Render->SetDynamicUbo(2, constBuffer);
+
+        g_Render->SetDynamicUbo(2, uniformBuffer);
     }
 
     SetSceneData();

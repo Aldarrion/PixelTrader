@@ -15,7 +15,7 @@ vs_out main(vertex vert)
 {
     vs_out o;
 
-    o.Pos = vert.Pos * Tile.Model * Scene.VP;
+    o.Pos = vert.Pos * Tile.World * Scene.VP;
     o.UV = vert.UV;
     o.Color = vert.Color;
 

@@ -455,6 +455,10 @@ inline Vec3 operator/(const Vec3& v, float t)
 
 
 //------------------------------------------------------------------------------
+struct Mat44;
+inline Vec4 operator*(const Vec4& v, const Mat44& m);
+
+//------------------------------------------------------------------------------
 // Matrix is saved as row major, meaning that the vector at m[0] is the first
 // row of the matrix, m[1] is the second row etc.
 // The first column is given by Vec4(m[0][0], m[1][0], m[2][0], m[3][0])
@@ -632,6 +636,34 @@ struct Mat44
         );
 
         return inverse;
+    }
+
+    //------------------------------------------------------------------------------
+    Vec3 TransformPos(const Vec3& pos) const
+    {
+        Vec4 result = pos.ToVec4Pos() * *this;
+        return Vec3(result.x, result.y, result.z);
+    }
+
+    //------------------------------------------------------------------------------
+    Vec3 TransformDir(const Vec3& pos) const
+    {
+        Vec4 result = pos.ToVec4Dir() * *this;
+        return Vec3(result.x, result.y, result.z);
+    }
+
+    //------------------------------------------------------------------------------
+    Vec2 TransformPos(Vec2 pos) const
+    {
+        Vec4 result = Vec4(pos.x, pos.y, 0, 1) * *this;
+        return Vec2(result.x, result.y);
+    }
+
+    //------------------------------------------------------------------------------
+    Vec2 TransformDir(Vec2 pos) const
+    {
+        Vec4 result = Vec4(pos.x, pos.y, 0, 0) * *this;
+        return Vec2(result.x, result.y);
     }
 };
 
@@ -834,6 +866,27 @@ inline Box2D MakeBox2DPosSize(Vec2 min, Vec2 size)
 }
 
 //------------------------------------------------------------------------------
+struct Circle
+{
+    Vec2    center_;
+    float   radius_;
+
+    Circle(Vec2 center, float radius)
+        : center_(center)
+        , radius_(radius)
+    {
+    }
+
+    Circle Offset(Vec2 pos) const
+    {
+        Circle result(center_ + pos, radius_);
+        return result;
+    }
+};
+
+//------------------------------------------------------------------------------
+// Intersections
+//------------------------------------------------------------------------------
 constexpr inline bool IsIntersecting(const Box2D& a, const Box2D& b)
 {
     if (a.max_.x < b.min_.x || a.min_.x > b.max_.x) 
@@ -903,23 +956,21 @@ constexpr inline IntersectionResult IsIntersecting(const Box2D& a, const Box2D& 
 }
 
 //------------------------------------------------------------------------------
-struct Circle
+constexpr inline bool IsIntersecting(const Circle& a, const Circle& b)
 {
-    Vec2    center_;
-    float   radius_;
+    return a.center_.DistanceSqr(b.center_) <= Sqr(a.radius_) + Sqr(b.radius_);
+}
 
-    Circle(Vec2 center, float radius)
-        : center_(center)
-        , radius_(radius)
-    {
-    }
 
-    Circle Offset(Vec2 pos) const
-    {
-        Circle result(center_ + pos, radius_);
-        return result;
-    }
-};
+//------------------------------------------------------------------------------
+inline Mat44 MakeTransform(float rotation, Vec2 pivot, Vec3 pos)
+{
+    Mat44 model = Mat44::RotationRoll(rotation);
+    model.SetPosition(pos);
+    Mat44 pivotOffset = Mat44::Translation(-Vec3(pivot.x, pivot.y, 0));
+    model = pivotOffset * model;
 
+    return model;
+}
 
 }
