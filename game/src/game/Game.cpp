@@ -103,10 +103,9 @@ void Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const 
 }
 
 //------------------------------------------------------------------------------
-void Game::AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity)
+void Game::AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity)
 {
     projectiles_.Positions.Add(pos);
-    projectiles_.Pivots.Add(pivot);
     projectiles_.Rotations.Add(rotation);
     projectiles_.Sprites.Add(sprite);
     projectiles_.TipColliders.Add(collider);
@@ -117,7 +116,6 @@ void Game::AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Sprite* sp
 void Game::RemoveProjectile(uint idx)
 {
     projectiles_.Positions.Remove(idx);
-    projectiles_.Pivots.Remove(idx);
     projectiles_.Rotations.Remove(idx);
     projectiles_.Sprites.Remove(idx);
     projectiles_.TipColliders.Remove(idx);
@@ -208,7 +206,7 @@ void Game::DrawColliders()
 
     for (int i = 0; i < projectiles_.TipColliders.Count(); ++i)
     {
-        DrawCollider(projectiles_.TipColliders[i], MakeTransform(projectiles_.Rotations[i], projectiles_.Pivots[i], projectiles_.Positions[i]));
+        DrawCollider(projectiles_.TipColliders[i], MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_));
     }
 
     for (int i = 0; i < targets_.Colliders.Count(); ++i)
@@ -224,7 +222,7 @@ static Vec3 TilePos(float x, float y, float z = 0)
 }
 
 //------------------------------------------------------------------------------
-static RESULT MakeSimpleSprite(const char* texPath, Sprite& t)
+static RESULT MakeSimpleSprite(const char* texPath, Sprite& t, Vec2 pivot)
 {
     Texture* tex;
     if (HS_FAILED(g_ResourceManager->LoadTexture2D(texPath, &tex)))
@@ -233,6 +231,7 @@ static RESULT MakeSimpleSprite(const char* texPath, Sprite& t)
     t.size_ = Vec2(tex->GetWidth(), tex->GetHeight());
     t.uvBox_ = Vec4{ 0, 0, 1, 1 };
     t.texture_ = tex;
+    t.pivot_ = Vec2(t.size_.x * pivot.x, t.size_.y * pivot.y);
 
     return R_OK;
 }
@@ -259,25 +258,25 @@ RESULT Game::InitWin32()
         }
     }
 
-    if (HS_FAILED(MakeSimpleSprite("textures/GoldChest.png", goldChestSprite_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/GoldChest.png", goldChestSprite_, Vec2::ZERO())))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleSprite("textures/Forest.png", forestSprite_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/Forest.png", forestSprite_, Vec2::ZERO())))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleSprite("textures/ForestDoor.png", forestDoorSprite_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/ForestDoor.png", forestDoorSprite_, Vec2::ZERO())))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleSprite("textures/Rock1.png", rockSprite_[0])))
+    if (HS_FAILED(MakeSimpleSprite("textures/Rock1.png", rockSprite_[0], Vec2::ZERO())))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleSprite("textures/Rock2.png", rockSprite_[1])))
+    if (HS_FAILED(MakeSimpleSprite("textures/Rock2.png", rockSprite_[1], Vec2::ZERO())))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleSprite("textures/Arrow.png", arrowSprite_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/Arrow.png", arrowSprite_, Vec2(0.5f, 0.5f))))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_, Vec2::ZERO())))
         return R_FAIL;
 
     Array<AnimationSegment> rockIdleSegments;
@@ -524,7 +523,6 @@ void Game::Update(float dTime)
 
             AddProjectile(
                 Vec3(projPos.x, projPos.y, 0.5f),
-                arrowSprite_.size_ / 2,
                 angle,
                 &arrowSprite_,
                 Circle(Vec2(7, 2.5f), 2.5f),
@@ -552,7 +550,7 @@ void Game::Update(float dTime)
         {
             for (int i = 0; i < projectiles_.Positions.Count();)
             {
-                Mat44 projectileTransform = MakeTransform(projectiles_.Rotations[i], projectiles_.Pivots[i], projectiles_.Positions[i]);
+                Mat44 projectileTransform = MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_);
                 Vec2 projPos = projectileTransform.TransformPos(projectiles_.TipColliders[i].center_);
 
                 for (int j = 0; j < targets_.Positions.Count(); ++j)
@@ -591,18 +589,18 @@ void Game::Update(float dTime)
     // Regular tiles
     for (int i = 0; i < sprites_.Positions.Count(); ++i)
     {
-        sr->AddSprite(sprites_.Sprites[i], sprites_.Positions[i]);
+        sr->AddSprite(sprites_.Sprites[i], Mat44::Translation(sprites_.Positions[i]));
     }
 
     for (int i = 0; i < objects_.Positions.Count(); ++i)
     {
-        sr->AddSprite(objects_.Sprites[i], objects_.Positions[i]);
+        sr->AddSprite(objects_.Sprites[i], Mat44::Translation(objects_.Positions[i]));
     }
 
     // Characters
     for (int i = 0; i < characters_.Sprites.Count(); ++i)
     {
-        sr->AddSprite(characters_.Sprites[i], characters_.Positions[i]);
+        sr->AddSprite(characters_.Sprites[i], Mat44::Translation(characters_.Positions[i]));
     }
 
     // Projectiles
@@ -611,16 +609,19 @@ void Game::Update(float dTime)
         Vec2 pos = projectiles_.Positions[i].XY();
         sr->AddSprite(
             projectiles_.Sprites[i],
-            Vec3(pos.x, pos.y, projectiles_.Positions[i].z),
-            projectiles_.Rotations[i],
-            projectiles_.Pivots[i]
+            // TODO(pavel): With ECS we should calculate the transform once during update and save it to entity and just read it here and in collider drawing, physics etc.
+            MakeTransform(
+                Vec3(pos.x, pos.y, projectiles_.Positions[i].z),
+                projectiles_.Rotations[i],
+                projectiles_.Sprites[i]->pivot_
+            )
         );
     }
 
     // Targets
     for (int i = 0; i < targets_.Sprites.Count(); ++i)
     {
-        sr->AddSprite(targets_.Sprites[i], targets_.Positions[i]);
+        sr->AddSprite(targets_.Sprites[i], Mat44::Translation(targets_.Positions[i]));
     }
 
     DrawColliders();

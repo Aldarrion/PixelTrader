@@ -507,7 +507,7 @@ struct Mat44
     }
 
     //------------------------------------------------------------------------------
-    static Mat44 Translation(Vec3 pos)
+    static Mat44 Translation(const Vec3& pos)
     {
         Mat44 translation = Mat44::Identity();
         translation.SetPosition(pos);
@@ -543,6 +543,12 @@ struct Mat44
     const Vec4& GetPosition() const
     {
         return *reinterpret_cast<const Vec4*>(m[3]);
+    }
+
+    //------------------------------------------------------------------------------
+    const Vec2& GetPositionXY() const
+    {
+        return *reinterpret_cast<const Vec2*>(m[3]);
     }
 
     //------------------------------------------------------------------------------
@@ -963,7 +969,7 @@ constexpr inline bool IsIntersecting(const Circle& a, const Circle& b)
 
 
 //------------------------------------------------------------------------------
-inline Mat44 MakeTransform(float rotation, Vec2 pivot, Vec3 pos)
+inline Mat44 MakeTransform(const Vec3& pos, float rotation, Vec2 pivot)
 {
     Mat44 model = Mat44::RotationRoll(rotation);
     model.SetPosition(pos);

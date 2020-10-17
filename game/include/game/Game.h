@@ -70,7 +70,6 @@ struct ProjectileArchetype
 {
     Array<Vec3>     Positions;
     Array<float>    Rotations;
-    Array<Vec2>     Pivots; // TODO(pavel): Move this to Sprite?
     Array<Sprite*>  Sprites;
     Array<Vec2>     Velocities;
     Array<Circle>   TipColliders;
@@ -152,7 +151,7 @@ private:
     void AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider);
     void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
 
-    void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
+    void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
     void RemoveProjectile(uint idx);
 
     void AddTarget(const Vec3& pos, Sprite* sprite, const Circle& collider);

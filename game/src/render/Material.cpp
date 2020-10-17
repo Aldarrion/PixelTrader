@@ -198,13 +198,11 @@ void SpriteMaterial::DrawSprite(const SpriteDrawData& data)
     }
 
     {
-        Mat44 world = MakeTransform(data.rotation_, data.pivot_, data.pos_);
-
         void* mapped;
         DynamicUBOEntry uniformBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::SpriteData), &mapped);
 
         auto ubo = (sh::SpriteData*)mapped;
-            ubo->World = world;
+            ubo->World = data.world_;
         g_Render->GetUBOCache()->EndAlloc();
 
         g_Render->SetDynamicUbo(2, uniformBuffer);

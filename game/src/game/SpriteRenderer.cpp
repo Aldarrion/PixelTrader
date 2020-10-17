@@ -26,26 +26,28 @@ void SpriteRenderer::ClearSprites()
 }
 
 //------------------------------------------------------------------------------
-void SpriteRenderer::AddSprite(Sprite* tile, Vec3 position, float rotation, Vec2 pivot)
+void SpriteRenderer::AddSprite(Sprite* sprite, const Mat44& world)
 {
-    const Box2D tileBoundBox = MakeBox2DMinMax(Vec2(position.x, position.y), Vec2(position.x + tile->size_.x, position.y + tile->size_.y));
+    Vec2 pos = world.GetPositionXY();
+    // TODO(pavel): This is not correct, we need to take into account the pivot and rotation as well, bounding box should be probably a part of the sprite
+    const Box2D tileBoundBox = MakeBox2DMinMax(pos - sprite->size_, pos + sprite->size_);
     const Box2D frustum = g_Render->GetCamera().GetOrthoFrustum();
 
     if (!IsIntersecting(tileBoundBox, frustum))
         return;
 
-    drawCalls_.Add(SpriteDrawCall{ tile, position, rotation, pivot });
+    drawCalls_.Add(SpriteDrawCall{ sprite, world });
 }
 
 //------------------------------------------------------------------------------
 static int SpriteDrawCallCmp(const void *a, const void *b)
 {
-    auto ta = (SpriteDrawCall*)a;
-    auto tb = (SpriteDrawCall*)b;
+    auto posA = ((SpriteDrawCall*)a)->world_.GetPosition();
+    auto posB = ((SpriteDrawCall*)b)->world_.GetPosition();
 
-    if (ta->position_.z > tb->position_.z)
+    if (posA.z > posB.z)
         return -1;
-    if (ta->position_.z < tb->position_.z)
+    if (posA.z < posB.z)
         return 1;
     return 0;
 }
@@ -65,9 +67,7 @@ void SpriteRenderer::Draw()
             drawCalls_[i].sprite_->texture_,
             drawCalls_[i].sprite_->uvBox_,
             drawCalls_[i].sprite_->size_,
-            drawCalls_[i].position_,
-            drawCalls_[i].rotation_,
-            drawCalls_[i].pivot_
+            drawCalls_[i].world_
         });
     }
 }

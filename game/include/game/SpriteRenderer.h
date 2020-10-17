@@ -15,15 +15,14 @@ struct Sprite
     Texture* texture_;
     Vec4 uvBox_;
     Vec2 size_;
+    Vec2 pivot_;
 };
 
 //------------------------------------------------------------------------------
 struct SpriteDrawCall
 {
     Sprite* sprite_;
-    Vec3 position_;
-    float rotation_;
-    Vec2 pivot_;
+    Mat44 world_;
 };
 
 //------------------------------------------------------------------------------
@@ -34,7 +33,7 @@ public:
     void Draw();
 
     void ClearSprites();
-    void AddSprite(Sprite* sprite, Vec3 position, float rotation = 0.0f, Vec2 pivot = Vec2::ZERO());
+    void AddSprite(Sprite* sprite, const Mat44& world);
 
 private:
     SpriteMaterial spriteMaterial_;

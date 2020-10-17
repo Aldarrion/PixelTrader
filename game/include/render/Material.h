@@ -27,9 +27,7 @@ struct SpriteDrawData
     Texture* texture_;
     Vec4 uvBox_;
     Vec2 size_;
-    Vec3 pos_;
-    float rotation_;
-    Vec2 pivot_;
+    Mat44 world_;
 };
 
 //------------------------------------------------------------------------------
