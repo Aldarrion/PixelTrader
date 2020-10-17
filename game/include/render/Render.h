@@ -109,6 +109,7 @@ class Render
 public:
     RESULT ReloadShaders();
     RESULT InitWin32(HWND hwnd, HINSTANCE hinst);
+    RESULT InitImgui();
 
     // Setting state
     template<PipelineStage stage>
@@ -230,8 +231,8 @@ private:
     VkCommandPool       directCmdPool_{};
     VkCommandBuffer     directCmdBuffers_[BB_IMG_COUNT]{};
 
-    VkRenderPass        renderPass_[BB_IMG_COUNT]{};
-    VkFramebuffer       frameBuffer_[BB_IMG_COUNT]{};
+    VkRenderPass        mainRenderPass_{};
+    VkFramebuffer       mainFrameBuffer_[BB_IMG_COUNT]{};
 
     // Descriptors
     VkDescriptorPool    bindlessPool_{};
@@ -242,6 +243,10 @@ private:
     VkDescriptorSet     immutableSamplerSet_{};
 
     VkDescriptorPool    dynamicUBODPool_[BB_IMG_COUNT]{};
+
+    // Imgui
+    // TODO(pavel): Rework this, how big descriptor pool does Imgui need? Can we use one of ours?
+    VkDescriptorPool    imguiDescriptorPool_;
 
     // Pipelines
     /*struct PipelineKey
@@ -281,6 +286,9 @@ private:
 
     UniquePtr<SpriteRenderer>       spriteRenderer_;
     UniquePtr<DebugShapeRenderer>   debugShapeRenderer_;
+
+    RESULT CreateMainRenderPass();
+    RESULT CreateMainFrameBuffer();
 
     //----------------------
     // Vertex layout manager

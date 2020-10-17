@@ -21,6 +21,8 @@
 
 #include "vulkan/vulkan_win32.h"
 
+#include "imgui/imgui_impl_vulkan.h"
+
 #include <malloc.h>
 #include <cstdio>
 #include <cfloat>
@@ -877,6 +879,12 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
 
+    if (FAILED(CreateMainRenderPass()))
+        return R_FAIL;
+
+    if (FAILED(CreateMainFrameBuffer()))
+        return R_FAIL;
+
     //-----------------------
     shaderManager_ = MakeUnique<ShaderManager>();
     if (shaderManager_->Init() != R_OK)
@@ -924,9 +932,177 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 }
 
 //------------------------------------------------------------------------------
+RESULT Render::CreateMainRenderPass()
+{
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format          = swapChainFormat_;
+    colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment   = 0;
+    colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    //VkAttachmentDescription depthAttachment{};
+    //depthAttachment.format          = VK_FORMAT_D24_UNORM_S8_UINT;
+    //depthAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
+    //depthAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    //depthAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    //depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+    //depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment   = 1;
+    depthAttachmentRef.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount    = 1;
+    subpass.pColorAttachments       = &colorAttachmentRef;
+    //subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    /*VkSubpassDependency dependency{};
+    dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass       = 0;
+    dependency.srcStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask    = 0;
+    dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
+
+    VkAttachmentDescription attachments[] = { colorAttachment/*, depthAttachment*/ };
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = hs_arr_len(attachments);
+    renderPassInfo.pAttachments = attachments;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    //renderPassInfo.dependencyCount = 1;
+    //renderPassInfo.pDependencies = &dependency;
+
+    hs_assert(!mainRenderPass_);
+
+    if (VKR_FAILED(vkCreateRenderPass(vkDevice_, &renderPassInfo, nullptr, &mainRenderPass_)))
+        return R_FAIL;
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+RESULT Render::CreateMainFrameBuffer()
+{
+    for (int bbIdx = 0; bbIdx < BB_IMG_COUNT; ++bbIdx)
+    {
+        VkImageView viewAttachments[] = { bbViews_[bbIdx]/*, depthViews_[bbIdx]*/ };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = mainRenderPass_;
+        framebufferInfo.attachmentCount = hs_arr_len(viewAttachments);
+        framebufferInfo.pAttachments    = viewAttachments;
+        framebufferInfo.width           = width_;
+        framebufferInfo.height          = height_;
+        framebufferInfo.layers          = 1;
+
+        hs_assert(!mainFrameBuffer_[bbIdx]);
+        if (VKR_FAILED(vkCreateFramebuffer(vkDevice_, &framebufferInfo, nullptr, &mainFrameBuffer_[bbIdx])))
+            return R_FAIL;
+    }
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+static void ImguiVkCheckResult(VkResult res)
+{
+    if (VKR_FAILED(res))
+    {
+        Log(LogLevel::Error, "Imgui vulkan result: %d", res);
+    }
+}
+
+//------------------------------------------------------------------------------
+RESULT Render::InitImgui()
+{
+    // Create Descriptor Pool
+    {
+        VkDescriptorPoolSize poolSizes[] =
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+        };
+        VkDescriptorPoolCreateInfo poolInfo = {};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        poolInfo.maxSets = 1000 * IM_ARRAYSIZE(poolSizes);
+        poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
+        poolInfo.pPoolSizes = poolSizes;
+
+        if (HS_FAILED(vkCreateDescriptorPool(vkDevice_, &poolInfo, nullptr, &imguiDescriptorPool_)))
+        {
+            return R_FAIL;
+        }
+    }
+
+    // Init
+    ImGui_ImplVulkan_InitInfo initInfo{};
+    initInfo.Instance          = vkInstance_;
+    initInfo.PhysicalDevice    = vkPhysicalDevice_;
+    initInfo.Device            = vkDevice_;
+    initInfo.QueueFamily       = directQueueFamilyIdx_;
+    initInfo.Queue             = vkDirectQueue_;
+    initInfo.PipelineCache     = nullptr; // TODO(pavel): Set
+    initInfo.DescriptorPool    = imguiDescriptorPool_;
+    initInfo.Allocator         = nullptr;
+    initInfo.MinImageCount     = BB_IMG_COUNT;
+    initInfo.ImageCount        = BB_IMG_COUNT;
+    initInfo.CheckVkResultFn   = ImguiVkCheckResult;
+    if (!ImGui_ImplVulkan_Init(&initInfo, mainRenderPass_))
+        return R_FAIL;
+
+    // Upload Fonts
+    {
+        // Use any command queue
+        if (!ImGui_ImplVulkan_CreateFontsTexture(directCmdBuffers_[currentBBIdx_]))
+            return R_FAIL;
+
+        // TODO(pavel): Do this sometime, we could either flush GPU and wait here or check it every time we preset... neither is very good
+        //ImGui_ImplVulkan_DestroyFontUploadObjects();
+    }
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
 void Render::Free()
 {
     FlushGpu<false, true>();
+
+    ImGui_ImplVulkan_Shutdown();
+
+    // TODO(pavel): Destroy everything
+    for (int bbIdx = 0; bbIdx < BB_IMG_COUNT; ++bbIdx)
+    {
+        vkDestroyFramebuffer(vkDevice_, mainFrameBuffer_[bbIdx], nullptr);
+    }
+
+    vkDestroyRenderPass(vkDevice_, mainRenderPass_, nullptr);
+    vkDestroyDevice(vkDevice_, nullptr);
 }
 
 //------------------------------------------------------------------------------
@@ -1124,7 +1300,7 @@ RESULT Render::PrepareForDraw()
     plInfo.pDepthStencilState   = &depthStencil;
     plInfo.pColorBlendState     = &colorBlending;
     plInfo.layout               = pipelineLayout_;
-    plInfo.renderPass           = renderPass_[currentBBIdx_];
+    plInfo.renderPass           = mainRenderPass_;
 
     VkPipeline pipeline{};
 
@@ -1249,91 +1425,6 @@ void Render::Draw(uint vertexCount, uint firstVertex)
 //------------------------------------------------------------------------------
 void Render::Update(float dTime)
 {
-    //-------------------
-    // Create render pass
-    VkRenderPass renderPass{};
-    {
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format          = swapChainFormat_;
-        colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment   = 0;
-        colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        //VkAttachmentDescription depthAttachment{};
-        //depthAttachment.format          = VK_FORMAT_D24_UNORM_S8_UINT;
-        //depthAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
-        //depthAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        //depthAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        //depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        //depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        //depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-        //depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depthAttachmentRef{};
-        depthAttachmentRef.attachment   = 1;
-        depthAttachmentRef.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = 1;
-        subpass.pColorAttachments       = &colorAttachmentRef;
-        //subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-        /*VkSubpassDependency dependency{};
-        dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass       = 0;
-        dependency.srcStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask    = 0;
-        dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
-
-        VkAttachmentDescription attachments[] = { colorAttachment/*, depthAttachment*/ };
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = hs_arr_len(attachments);
-        renderPassInfo.pAttachments = attachments;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        //renderPassInfo.dependencyCount = 1;
-        //renderPassInfo.pDependencies = &dependency;
-
-        VKR_CHECK(vkCreateRenderPass(vkDevice_, &renderPassInfo, nullptr, &renderPass));
-
-        if (renderPass_[currentBBIdx_])
-            vkDestroyRenderPass(vkDevice_, renderPass_[currentBBIdx_], nullptr);
-        renderPass_[currentBBIdx_] = renderPass;
-    }
-
-    //-------------------
-    // Create framebuffer
-    VkFramebuffer frameBuffer{};
-    {
-        VkImageView viewAttachments[] = { bbViews_[currentBBIdx_]/*, depthViews_[currentBBIdx_]*/ };
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass      = renderPass;
-        framebufferInfo.attachmentCount = hs_arr_len(viewAttachments);
-        framebufferInfo.pAttachments    = viewAttachments;
-        framebufferInfo.width           = width_;
-        framebufferInfo.height          = height_;
-        framebufferInfo.layers          = 1;
-        
-        VKR_CHECK(vkCreateFramebuffer(vkDevice_, &framebufferInfo, nullptr, &frameBuffer));
-        
-        if (frameBuffer_[currentBBIdx_])
-            vkDestroyFramebuffer(vkDevice_, frameBuffer_[currentBBIdx_], nullptr);
-        frameBuffer_[currentBBIdx_] = frameBuffer;
-    }
-
     const Color clearColor = Color::ToLinear(Color{ 0.72f, 0.74f, 0.98f, 1.0f });
 
     VkClearValue clearVal[2] = {};
@@ -1342,15 +1433,16 @@ void Render::Update(float dTime)
 
     VkRenderPassBeginInfo renderPassBeginInfo{};
     renderPassBeginInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderPass      = renderPass;
-    renderPassBeginInfo.framebuffer     = frameBuffer;
+    renderPassBeginInfo.renderPass      = mainRenderPass_;
+    renderPassBeginInfo.framebuffer     = mainFrameBuffer_[currentBBIdx_];
     renderPassBeginInfo.renderArea      = VkRect2D { VkOffset2D { 0, 0 }, VkExtent2D { width_, height_ } };
     renderPassBeginInfo.clearValueCount = hs_arr_len(clearVal);
     renderPassBeginInfo.pClearValues    = clearVal;
 
+    ImGui_ImplVulkan_NewFrame();
 
-    // Before frame start
     //-------------------
+    // Frame start
 
     vkCmdBeginRenderPass(directCmdBuffers_[currentBBIdx_], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1367,6 +1459,9 @@ void Render::Update(float dTime)
 
     if (debugShapeRenderer_)
         debugShapeRenderer_->Draw();
+
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), directCmdBuffers_[currentBBIdx_]);
 
     vkCmdEndRenderPass(directCmdBuffers_[currentBBIdx_]);
 

@@ -16,6 +16,8 @@
 #include "common/Logging.h"
 #include "common/hs_Assert.h"
 
+#include "imgui/imgui.h"
+
 namespace hs
 {
 

@@ -10,6 +10,23 @@ set(CMAKE_CXX_STANDARD 17)
 set(PROJ_NAME PixelTrader)
 project(${PROJ_NAME})
 
+set(VK_SDK_DIR "" CACHE PATH "Root directory of the LunarG SDK")
+
+# ImGui to a lib
+file(GLOB_RECURSE IMGUI_HEADERS "extern/imgui/include/*.h")
+file(GLOB_RECURSE IMGUI_SOURCES "extern/imgui/src/*.cpp")
+
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/include/imgui" PREFIX "ImGui" FILES ${IMGUI_HEADERS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/src" PREFIX "ImGui" FILES ${IMGUI_SOURCES})
+
+add_library(ImGui ${IMGUI_HEADERS} ${IMGUI_SOURCES})
+
+target_include_directories(ImGui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/include/imgui")
+target_include_directories(ImGui PRIVATE "${VK_SDK_DIR}/Include")
+
+target_include_directories(ImGui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/include")
+
+# Game
 file(GLOB_RECURSE GAME_HEADERS "game/include/*.h")
 file(GLOB_RECURSE GAME_SOURCES "game/src/*.cpp")
 file(GLOB_RECURSE GAME_NATVIS "game/*.natvis")
@@ -22,8 +39,6 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/extern/cjson/src" PREFIX "Extern/
 
 add_executable(${PROJ_NAME} WIN32 ${GAME_SOURCES} ${GAME_HEADERS} ${GAME_NATVIS} ${EXTERN_CJSON_SRC} ${EDITORCONFIG})
 
-set(VK_SDK_DIR "" CACHE PATH "Root directory of the LunarG SDK")
-
 target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/game/include")
 target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/extern/VulkanMemoryAllocator/include")
 target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/extern/stb/include")
@@ -31,6 +46,7 @@ target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext
 target_include_directories(${PROJ_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shaderStructs")
 target_include_directories(${PROJ_NAME} PRIVATE "${VK_SDK_DIR}/Include")
 
+target_link_libraries(${PROJ_NAME} ImGui)
 target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/vulkan-1.lib")
 target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/shaderc_shared.lib")
 
@@ -52,6 +68,9 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
     add_definitions(/MP)
 
+    # Warnings as errors
+    target_compile_options(${PROJ_NAME} PRIVATE /WX)
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4267") # conversion from 'size_t' to 'uint', possible loss of data
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244") # conversion from 'LONG' to 'float', possible loss of data
 
@@ -71,6 +90,7 @@ if(MSVC)
 
     # shaderc is compiled with /MD so we cannot compile with /MDd even on debug or we would need to rebuild the shaderc_combined.lib
     set_property(TARGET ${PROJ_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    set_property(TARGET ImGui PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
     # Also for shaderc
     add_definitions(-D_HAS_ITERATOR_DEBUGGING=0)
     add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)

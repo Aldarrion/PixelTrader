@@ -10,7 +10,13 @@
 
 #include "platform/hs_Windows.h"
 
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui.h"
+
 #include <chrono>
+
+// Forward declarations
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 //------------------------------------------------------------------------------
 HWND g_hwnd{};
@@ -96,6 +102,32 @@ static hs::RESULT InitWindow(int width, int height, HINSTANCE instance)
 }
 
 //------------------------------------------------------------------------------
+static hs::RESULT HsInitImguiWin32()
+{
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplWin32_Init(g_hwnd);
+
+    return hs::R_OK;
+}
+
+//------------------------------------------------------------------------------
+static void HsDestroyImgui()
+{
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+}
+
+//------------------------------------------------------------------------------
 int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, int showCmd)
 {
     hs::Log(hs::LogLevel::Info, "VkRenderer start\n");
@@ -132,6 +164,19 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     if (FAILED(hs::g_Render->InitWin32(g_hwnd, instance)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init render");
+        return -1;
+    }
+
+    // Imgui
+    if (FAILED(HsInitImguiWin32()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to init Imgui for Win32");
+        return -1;
+    }
+
+    if (FAILED(hs::g_Render->InitImgui()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to init render for Imgui");
         return -1;
     }
 
@@ -176,6 +221,12 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             DispatchMessage(&msg);
 
             if (g_hwnd && GetForegroundWindow() != g_hwnd)
+                continue;
+
+            // TODO(pavel): This is ify, could this be a problem for messges such as WM_QUIT? Also add imgui activation.
+            ImGui_ImplWin32_WndProcHandler(g_hwnd, msg.message, msg.wParam, msg.lParam);
+            const auto& io = ImGui::GetIO();
+            if (io.WantCaptureMouse || io.WantCaptureKeyboard)
                 continue;
 
             switch (msg.message)
@@ -233,6 +284,9 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 
             hs::g_Game->SetWindowActive(g_isWindowActive);
 
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+
             hs::g_Input->Update();
             hs::g_Game->Update(dTime);
             hs::g_Render->Update(dTime);
@@ -241,10 +295,12 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         }
     }
 
+    // Cleanup
     hs::DestroyGame();
     hs::DestroyInput();
     hs::DestroyRender();
     hs::DestroyResourceManager();
+    HsDestroyImgui();
 
     return 0;
 }
