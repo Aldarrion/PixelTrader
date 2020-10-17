@@ -1,5 +1,5 @@
 #include "shaderStructs/Common.h"
-#include "TileCommon.h"
+#include "SpriteCommon.h"
 
 SamplerState PointSampler : register(s0, space0);
 

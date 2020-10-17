@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/Camera.h"
-#include "game/TileRenderer.h"
+#include "game/SpriteRenderer.h"
 
 #include "containers/Array.h"
 
@@ -25,7 +25,7 @@ void DestroyGame();
 //------------------------------------------------------------------------------
 struct AnimationSegment
 {
-    Tile* tile_;
+    Sprite* sprite_;
     float time_;
 };
 
@@ -34,7 +34,7 @@ struct AnimationState
 {
     RESULT Init(const Array<AnimationSegment>& segments);
     void Update(float dTime);
-    Tile* GetCurrentTile() const;
+    Sprite* GetCurrentSprite() const;
 
     Array<AnimationSegment> segments_;
     uint currentSegment_{};
@@ -42,17 +42,17 @@ struct AnimationState
 };
 
 //------------------------------------------------------------------------------
-struct TileArchetype
+struct SpriteArchetype
 {
     Array<Vec3>     Positions;
-    Array<Tile*>    Tiles;
+    Array<Sprite*>  Sprites;
 };
 
 //------------------------------------------------------------------------------
 struct ObjectArchetype
 {
     Array<Vec3>     Positions;
-    Array<Tile*>    Tiles;
+    Array<Sprite*>  Sprites;
     Array<Box2D>    Colliders;
 };
 
@@ -60,7 +60,7 @@ struct ObjectArchetype
 struct CharacterArchetype
 {
     Array<Vec3>             Positions;
-    Array<Tile*>            Tiles;
+    Array<Sprite*>          Sprites;
     Array<AnimationState>   Animations;
     Array<Box2D>            Colliders;
 };
@@ -70,8 +70,8 @@ struct ProjectileArchetype
 {
     Array<Vec3>     Positions;
     Array<float>    Rotations;
-    Array<Vec2>     Pivots; // TODO(pavel): Move this to Tile?
-    Array<Tile*>    Tiles;
+    Array<Vec2>     Pivots; // TODO(pavel): Move this to Sprite?
+    Array<Sprite*>  Sprites;
     Array<Vec2>     Velocities;
     Array<Circle>   TipColliders;
 };
@@ -81,7 +81,7 @@ struct TargetArchetype
 {
     Array<Vec3>     Positions;
     Array<Circle>   Colliders;
-    Array<Tile*>    Tiles;
+    Array<Sprite*>  Sprites;
 };
 
 //------------------------------------------------------------------------------
@@ -129,16 +129,16 @@ private:
 
     float dTime_{};
 
-    Tile groundTile_[3 * 3]{};
-    Tile goldChestTile_{};
-    Tile rockTile_[2]{};
-    Tile forestTile_{};
-    Tile forestDoorTile_{};
-    Tile arrowTile_{};
-    Tile targetTile_{};
+    Sprite groundSprite_[3 * 3]{};
+    Sprite goldChestSprite_{};
+    Sprite rockSprite_[2]{};
+    Sprite forestSprite_{};
+    Sprite forestDoorSprite_{};
+    Sprite arrowSprite_{};
+    Sprite targetSprite_{};
 
     // Archetypes
-    TileArchetype       tiles_{};
+    SpriteArchetype     sprites_{};
     CharacterArchetype  characters_{};
     GroundArchetype     ground_{};
     ObjectArchetype     objects_{};
@@ -148,18 +148,18 @@ private:
     // Debug
     bool visualizeColliders_{};
 
-    void AddTile(const Vec3& pos, Tile* tile);
-    void AddObject(const Vec3& pos, Tile* tile, const Box2D* collider);
+    void AddSprite(const Vec3& pos, Sprite* sprite);
+    void AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider);
     void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
 
-    void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Circle& tipCollider, Vec2 velocity);
+    void AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
     void RemoveProjectile(uint idx);
 
-    void AddTarget(const Vec3& pos, Tile* tile, const Circle& collider);
+    void AddTarget(const Vec3& pos, Sprite* sprite, const Circle& collider);
     void RemoveTarget(uint idx);
 
 
-    void AnimateTiles();
+    void AnimateSprites();
     void DrawColliders();
 };
 

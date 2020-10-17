@@ -18,7 +18,7 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
-struct TileVertex
+struct SpriteVertex
 {
     Vec4 position_;
     Vec2 uv_;
@@ -27,7 +27,7 @@ struct TileVertex
 };
 
 //------------------------------------------------------------------------------
-uint TileVertexLayout()
+uint SpriteVertexLayout()
 {
     static VkVertexInputAttributeDescription attributeDescriptions[3]{};
     attributeDescriptions[0].binding = 0;
@@ -47,7 +47,7 @@ uint TileVertexLayout()
 
     static VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(TileVertex);
+    bindingDescription.stride = sizeof(SpriteVertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -76,7 +76,7 @@ uint PosColVertLayout()
 
     static VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(TileVertex);
+    bindingDescription.stride = sizeof(SpriteVertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -105,36 +105,36 @@ void SetSceneData()
 }
 
 //------------------------------------------------------------------------------
-TileMaterial::~TileMaterial() = default;
+SpriteMaterial::~SpriteMaterial() = default;
 
 //------------------------------------------------------------------------------
-RESULT TileMaterial::Init()
+RESULT SpriteMaterial::Init()
 {
     //
-    tileVert_ = g_Render->GetShaderManager()->GetOrCreateShader("Tile_vs.hlsl");
-    tileFrag_ = g_Render->GetShaderManager()->GetOrCreateShader("Tile_fs.hlsl");
+    vs_ = g_Render->GetShaderManager()->GetOrCreateShader("Sprite_vs.hlsl");
+    fs_ = g_Render->GetShaderManager()->GetOrCreateShader("Sprite_fs.hlsl");
 
-    if (!tileVert_ || !tileFrag_)
+    if (!vs_ || !fs_)
         return R_FAIL;
 
     //
-    tileVertexLayout_ = TileVertexLayout();
+    vertexLayout_ = SpriteVertexLayout();
 
     return R_OK;
 }
 
 //------------------------------------------------------------------------------
-void TileMaterial::Draw()
+void SpriteMaterial::Draw()
 {
     hs_assert(false);
 }
 
 //------------------------------------------------------------------------------
-void TileMaterial::DrawTile(const TileDrawData& data)
+void SpriteMaterial::DrawSprite(const SpriteDrawData& data)
 {
     {
-        TileVertex* mapped{};
-        VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(6 * sizeof(TileVertex), sizeof(TileVertex), (void**)&mapped);
+        SpriteVertex* mapped{};
+        VertexBufferEntry vbEntry = g_Render->GetVertexCache()->BeginAlloc(6 * sizeof(SpriteVertex), sizeof(SpriteVertex), (void**)&mapped);
 
         Vec3 vertPos = Vec3::ZERO();
 
@@ -201,9 +201,9 @@ void TileMaterial::DrawTile(const TileDrawData& data)
         Mat44 world = MakeTransform(data.rotation_, data.pivot_, data.pos_);
 
         void* mapped;
-        DynamicUBOEntry uniformBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::TileData), &mapped);
+        DynamicUBOEntry uniformBuffer = g_Render->GetUBOCache()->BeginAlloc(sizeof(sh::SpriteData), &mapped);
 
-        auto ubo = (sh::TileData*)mapped;
+        auto ubo = (sh::SpriteData*)mapped;
             ubo->World = world;
         g_Render->GetUBOCache()->EndAlloc();
 
@@ -212,12 +212,12 @@ void TileMaterial::DrawTile(const TileDrawData& data)
 
     SetSceneData();
 
-    g_Render->SetVertexLayout(0, tileVertexLayout_);
+    g_Render->SetVertexLayout(0, vertexLayout_);
     
     g_Render->SetTexture(0, data.texture_);
 
-    g_Render->SetShader<PS_VERT>(tileVert_);
-    g_Render->SetShader<PS_FRAG>(tileFrag_);
+    g_Render->SetShader<PS_VERT>(vs_);
+    g_Render->SetShader<PS_FRAG>(fs_);
 
     g_Render->Draw(6, 0);
 }

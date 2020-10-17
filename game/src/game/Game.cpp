@@ -1,6 +1,6 @@
 #include "game/Game.h"
 
-#include "game/TileRenderer.h"
+#include "game/SpriteRenderer.h"
 #include "game/DebugShapeRenderer.h"
 
 #include "render/Texture.h"
@@ -50,10 +50,10 @@ void AnimationState::Update(float dTime)
 }
 
 //------------------------------------------------------------------------------
-Tile* AnimationState::GetCurrentTile() const
+Sprite* AnimationState::GetCurrentSprite() const
 {
     hs_assert(currentSegment_ < segments_.Count());
-    return segments_[currentSegment_].tile_;
+    return segments_[currentSegment_].sprite_;
 }
 
 
@@ -76,19 +76,19 @@ void DestroyGame()
 Game::~Game() = default;
 
 //------------------------------------------------------------------------------
-void Game::AddTile(const Vec3& pos, Tile* tile)
+void Game::AddSprite(const Vec3& pos, Sprite* sprite)
 {
-    tiles_.Positions.Add(pos);
-    tiles_.Tiles.Add(tile);
+    sprites_.Positions.Add(pos);
+    sprites_.Sprites.Add(sprite);
 }
 
 //------------------------------------------------------------------------------
-void Game::AddObject(const Vec3& pos, Tile* tile, const Box2D* collider)
+void Game::AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider)
 {
     objects_.Positions.Add(pos);
-    objects_.Tiles.Add(tile);
+    objects_.Sprites.Add(sprite);
     if (!collider)
-        objects_.Colliders.Add(MakeBox2DPosSize(Vec2::ZERO(), tile->size_));
+        objects_.Colliders.Add(MakeBox2DPosSize(Vec2::ZERO(), sprite->size_));
     else
         objects_.Colliders.Add(*collider);
 }
@@ -98,17 +98,17 @@ void Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const 
 {
     characters_.Positions.Add(pos);
     characters_.Animations.Add(animation);
-    characters_.Tiles.Add(animation.GetCurrentTile());
+    characters_.Sprites.Add(animation.GetCurrentSprite());
     characters_.Colliders.Add(collider);
 }
 
 //------------------------------------------------------------------------------
-void Game::AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Tile* tile, const Circle& collider, Vec2 velocity)
+void Game::AddProjectile(const Vec3& pos, Vec2 pivot, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity)
 {
     projectiles_.Positions.Add(pos);
     projectiles_.Pivots.Add(pivot);
     projectiles_.Rotations.Add(rotation);
-    projectiles_.Tiles.Add(tile);
+    projectiles_.Sprites.Add(sprite);
     projectiles_.TipColliders.Add(collider);
     projectiles_.Velocities.Add(velocity);
 }
@@ -119,17 +119,17 @@ void Game::RemoveProjectile(uint idx)
     projectiles_.Positions.Remove(idx);
     projectiles_.Pivots.Remove(idx);
     projectiles_.Rotations.Remove(idx);
-    projectiles_.Tiles.Remove(idx);
+    projectiles_.Sprites.Remove(idx);
     projectiles_.TipColliders.Remove(idx);
     projectiles_.Velocities.Remove(idx);
 }
 
 //------------------------------------------------------------------------------
-void Game::AddTarget(const Vec3& pos, Tile* tile,  const Circle& collider)
+void Game::AddTarget(const Vec3& pos, Sprite* sprite,  const Circle& collider)
 {
     targets_.Positions.Add(pos);
     targets_.Colliders.Add(collider);
-    targets_.Tiles.Add(tile);
+    targets_.Sprites.Add(sprite);
 }
 
 //------------------------------------------------------------------------------
@@ -137,16 +137,16 @@ void Game::RemoveTarget(uint idx)
 {
     targets_.Positions.Remove(idx);
     targets_.Colliders.Remove(idx);
-    targets_.Tiles.Remove(idx);
+    targets_.Sprites.Remove(idx);
 }
 
 //------------------------------------------------------------------------------
-void Game::AnimateTiles()
+void Game::AnimateSprites()
 {
     for (int i = 0; i < characters_.Animations.Count(); ++i)
     {
         characters_.Animations[i].Update(dTime_);
-        characters_.Tiles[i] = characters_.Animations[i].GetCurrentTile();
+        characters_.Sprites[i] = characters_.Animations[i].GetCurrentSprite();
     }
 }
 
@@ -154,7 +154,7 @@ void Game::AnimateTiles()
 static constexpr Color COLLIDER_COLOR = Color(0, 1, 0, 1);
 
 //------------------------------------------------------------------------------
-void DrawCollider(const Box2D& collider)
+static void DrawCollider(const Box2D& collider)
 {
     Vec3 verts[5];
     verts[0] = verts[4] = Vec3(collider.min_.x, collider.min_.y, 0);
@@ -166,7 +166,7 @@ void DrawCollider(const Box2D& collider)
 }
 
 //------------------------------------------------------------------------------
-void DrawCollider(const Circle& collider, const Mat44& world)
+static void DrawCollider(const Circle& collider, const Mat44& world)
 {
     constexpr uint VERT_COUNT = 32;
     Vec3 verts[VERT_COUNT];
@@ -218,13 +218,13 @@ void Game::DrawColliders()
 }
 
 //------------------------------------------------------------------------------
-Vec3 TilePos(float x, float y, float z = 0)
+static Vec3 TilePos(float x, float y, float z = 0)
 {
     return Vec3{ (float)x * TILE_SIZE, (float)y * TILE_SIZE, (float)z };
 }
 
 //------------------------------------------------------------------------------
-RESULT MakeSimpleTile(const char* texPath, Tile& t)
+static RESULT MakeSimpleSprite(const char* texPath, Sprite& t)
 {
     Texture* tex;
     if (HS_FAILED(g_ResourceManager->LoadTexture2D(texPath, &tex)))
@@ -249,40 +249,40 @@ RESULT Game::InitWin32()
     {
         for (int x = 0; x < 3; ++x)
         {
-            Tile t{};
+            Sprite t{};
 
             t.texture_ = groundTileTex;
             t.uvBox_ = Vec4{ uvSize * x, uvSize * y, uvSize, uvSize };
             t.size_ = Vec2{ 16, 16 };
 
-            groundTile_[3 * y + x] = t;
+            groundSprite_[3 * y + x] = t;
         }
     }
 
-    if (HS_FAILED(MakeSimpleTile("textures/GoldChest.png", goldChestTile_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/GoldChest.png", goldChestSprite_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Forest.png", forestTile_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/Forest.png", forestSprite_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/ForestDoor.png", forestDoorTile_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/ForestDoor.png", forestDoorSprite_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Rock1.png", rockTile_[0])))
+    if (HS_FAILED(MakeSimpleSprite("textures/Rock1.png", rockSprite_[0])))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Rock2.png", rockTile_[1])))
+    if (HS_FAILED(MakeSimpleSprite("textures/Rock2.png", rockSprite_[1])))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Arrow.png", arrowTile_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/Arrow.png", arrowSprite_)))
         return R_FAIL;
 
-    if (HS_FAILED(MakeSimpleTile("textures/Target.png", targetTile_)))
+    if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_)))
         return R_FAIL;
 
     Array<AnimationSegment> rockIdleSegments;
-    for (uint i = 0; i < hs_arr_len(rockTile_); ++i)
-        rockIdleSegments.Add(AnimationSegment{ &rockTile_[i], 0.5f });
+    for (uint i = 0; i < hs_arr_len(rockSprite_); ++i)
+        rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
 
     AnimationState rockIdle{};
     rockIdle.Init(rockIdleSegments);
@@ -291,37 +291,37 @@ RESULT Game::InitWin32()
     // ------------------------
     // Create initial map state
     Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
-    AddObject(TilePos(0, 0.5f, 1), &goldChestTile_, &chestCollider);
+    AddObject(TilePos(0, 0.5f, 1), &goldChestSprite_, &chestCollider);
 
     int left = -6;
     int width = 15;
     int height = 10;
 
-    AddTile(Vec3(left * TILE_SIZE, 0.4f, 3), &forestTile_);
+    AddSprite(Vec3(left * TILE_SIZE, 0.4f, 3), &forestSprite_);
 
-    AddTile(TilePos(left + 2, 0.3f, 2), &forestDoorTile_);
+    AddSprite(TilePos(left + 2, 0.3f, 2), &forestDoorSprite_);
 
     int y = 0;
-    AddTile(TilePos(left, y), &groundTile_[TOP_LEFT]);
+    AddSprite(TilePos(left, y), &groundSprite_[TOP_LEFT]);
     for (int i = 0; i < width; ++i)
-        AddTile(TilePos(left + 1 + i, y), &groundTile_[TOP]);
-    AddTile(TilePos(left + width + 1, y), &groundTile_[TOP_RIGHT]);
+        AddSprite(TilePos(left + 1 + i, y), &groundSprite_[TOP]);
+    AddSprite(TilePos(left + width + 1, y), &groundSprite_[TOP_RIGHT]);
     
     int j = 0;
     for (; j < height; j++)
     {
         y = -1 - j;
-        AddTile(TilePos(left, y), &groundTile_[MID_LEFT]);
+        AddSprite(TilePos(left, y), &groundSprite_[MID_LEFT]);
         for (int i = 0; i < width; ++i)
-            AddTile(TilePos(left + 1 + i, y), &groundTile_[MID]);
-        AddTile(TilePos(left + width + 1, y), &groundTile_[MID_RIGHT]);
+            AddSprite(TilePos(left + 1 + i, y), &groundSprite_[MID]);
+        AddSprite(TilePos(left + width + 1, y), &groundSprite_[MID_RIGHT]);
     }
 
     y = -j - 1;
-    AddTile(TilePos(left, y), &groundTile_[BOT_LEFT]);
+    AddSprite(TilePos(left, y), &groundSprite_[BOT_LEFT]);
     for (int i = 0; i < width; ++i)
-        AddTile(TilePos(left + 1 + i, y), &groundTile_[BOT]);
-    AddTile(TilePos(left + width + 1, y), &groundTile_[BOT_RIGHT]);
+        AddSprite(TilePos(left + 1 + i, y), &groundSprite_[BOT]);
+    AddSprite(TilePos(left + width + 1, y), &groundSprite_[BOT_RIGHT]);
 
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
     AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
@@ -353,7 +353,7 @@ constexpr float TARGET_COOLDOWN = 3.0f;
 float targetTimeToSpawn{};
 
 //------------------------------------------------------------------------------
-Vec2 ClosestNormal(const Box2D& a, const Box2D& b)
+static Vec2 ClosestNormal(const Box2D& a, const Box2D& b)
 {
     float minDist = FLT_MAX;
     Vec2 normal{};
@@ -389,7 +389,8 @@ Vec2 ClosestNormal(const Box2D& a, const Box2D& b)
 }
 
 //------------------------------------------------------------------------------
-Vec2 CursorToWorld()
+// TODO(pavel): move to camera? or input?
+static Vec2 CursorToWorld()
 {
     const Camera& cam = g_Render->GetCamera();
     Mat44 worldToProj = cam.ToCamera() * cam.ToProjection();
@@ -405,7 +406,7 @@ Vec2 CursorToWorld()
 }
 
 //------------------------------------------------------------------------------
-float RotationFromDirection(Vec2 dirNormalized)
+static float RotationFromDirection(Vec2 dirNormalized)
 {
     float dotX = dirNormalized.Dot(Vec2::RIGHT());
     float dotY = dirNormalized.Dot(Vec2::UP());
@@ -503,7 +504,7 @@ void Game::Update(float dTime)
         pos.y += dtVel.y;
 
         Camera& cam = g_Render->GetCamera();
-        cam.SetPosition(Vec2{ pos.x, pos.y } + (characters_.Tiles[0]->size_ / 2.0f)); // Center the camera pos at the center of the player
+        cam.SetPosition(Vec2{ pos.x, pos.y } + (characters_.Sprites[0]->size_ / 2.0f)); // Center the camera pos at the center of the player
         cam.UpdateMatrics();
     }
 
@@ -515,7 +516,7 @@ void Game::Update(float dTime)
             timeToShoot = SHOOT_COOLDOWN;
 
             Vec2 to = CursorToWorld();
-            Vec2 projPos = characters_.Positions[0].XY() + characters_.Tiles[0]->size_ / 2;
+            Vec2 projPos = characters_.Positions[0].XY() + characters_.Sprites[0]->size_ / 2;
             Vec2 dir(to - projPos);
             dir.Normalize();
 
@@ -523,9 +524,9 @@ void Game::Update(float dTime)
 
             AddProjectile(
                 Vec3(projPos.x, projPos.y, 0.5f),
-                arrowTile_.size_ / 2,
+                arrowSprite_.size_ / 2,
                 angle,
-                &arrowTile_,
+                &arrowSprite_,
                 Circle(Vec2(7, 2.5f), 2.5f),
                 dir * projectileSpeed
             );
@@ -576,40 +577,40 @@ void Game::Update(float dTime)
         targetTimeToSpawn -= GetDTime();
         if (targets_.Positions.IsEmpty() && targetTimeToSpawn <= 0)
         {
-            AddTarget(TilePos(5, 5, 2.5f), &targetTile_, Circle(targetTile_.size_ / 2.0f, 8));
+            AddTarget(TilePos(5, 5, 2.5f), &targetSprite_, Circle(targetSprite_.size_ / 2.0f, 8));
         }
     }
 
-    AnimateTiles();
+    AnimateSprites();
 
     // Draw calls
-    TileRenderer* tr = g_Render->GetTileRenderer();
+    SpriteRenderer* sr = g_Render->GetSpriteRenderer();
 
-    tr->ClearTiles();
+    sr->ClearSprites();
 
     // Regular tiles
-    for (int i = 0; i < tiles_.Positions.Count(); ++i)
+    for (int i = 0; i < sprites_.Positions.Count(); ++i)
     {
-        tr->AddTile(tiles_.Tiles[i], tiles_.Positions[i]);
+        sr->AddSprite(sprites_.Sprites[i], sprites_.Positions[i]);
     }
 
     for (int i = 0; i < objects_.Positions.Count(); ++i)
     {
-        tr->AddTile(objects_.Tiles[i], objects_.Positions[i]);
+        sr->AddSprite(objects_.Sprites[i], objects_.Positions[i]);
     }
 
     // Characters
-    for (int i = 0; i < characters_.Tiles.Count(); ++i)
+    for (int i = 0; i < characters_.Sprites.Count(); ++i)
     {
-        tr->AddTile(characters_.Tiles[i], characters_.Positions[i]);
+        sr->AddSprite(characters_.Sprites[i], characters_.Positions[i]);
     }
 
     // Projectiles
-    for (int i = 0; i < projectiles_.Tiles.Count(); ++i)
+    for (int i = 0; i < projectiles_.Sprites.Count(); ++i)
     {
         Vec2 pos = projectiles_.Positions[i].XY();
-        tr->AddTile(
-            projectiles_.Tiles[i],
+        sr->AddSprite(
+            projectiles_.Sprites[i],
             Vec3(pos.x, pos.y, projectiles_.Positions[i].z),
             projectiles_.Rotations[i],
             projectiles_.Pivots[i]
@@ -617,9 +618,9 @@ void Game::Update(float dTime)
     }
 
     // Targets
-    for (int i = 0; i < targets_.Tiles.Count(); ++i)
+    for (int i = 0; i < targets_.Sprites.Count(); ++i)
     {
-        tr->AddTile(targets_.Tiles[i], targets_.Positions[i]);
+        sr->AddSprite(targets_.Sprites[i], targets_.Positions[i]);
     }
 
     DrawColliders();

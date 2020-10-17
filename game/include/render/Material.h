@@ -22,7 +22,7 @@ public:
 };
 
 //------------------------------------------------------------------------------
-struct TileDrawData
+struct SpriteDrawData
 {
     Texture* texture_;
     Vec4 uvBox_;
@@ -33,19 +33,19 @@ struct TileDrawData
 };
 
 //------------------------------------------------------------------------------
-class TileMaterial : public Material
+class SpriteMaterial : public Material
 {
 public:
-    ~TileMaterial();
+    ~SpriteMaterial();
 
     RESULT Init() override;
     void Draw() override;
-    void DrawTile(const TileDrawData& data);
+    void DrawSprite(const SpriteDrawData& data);
 
 private:
-    Shader* tileVert_{};
-    Shader* tileFrag_{};
-    uint    tileVertexLayout_{};
+    Shader* vs_{};
+    Shader* fs_{};
+    uint    vertexLayout_{};
 };
 
 //------------------------------------------------------------------------------

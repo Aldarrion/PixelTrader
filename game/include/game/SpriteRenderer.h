@@ -10,7 +10,7 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
-struct Tile
+struct Sprite
 {
     Texture* texture_;
     Vec4 uvBox_;
@@ -18,27 +18,27 @@ struct Tile
 };
 
 //------------------------------------------------------------------------------
-struct TileDrawCall
+struct SpriteDrawCall
 {
-    Tile* tile_;
+    Sprite* sprite_;
     Vec3 position_;
     float rotation_;
     Vec2 pivot_;
 };
 
 //------------------------------------------------------------------------------
-class TileRenderer
+class SpriteRenderer
 {
 public:
     RESULT Init();
     void Draw();
 
-    void ClearTiles();
-    void AddTile(Tile* tile, Vec3 position, float rotation = 0.0f, Vec2 pivot = Vec2::ZERO());
+    void ClearSprites();
+    void AddSprite(Sprite* sprite, Vec3 position, float rotation = 0.0f, Vec2 pivot = Vec2::ZERO());
 
 private:
-    TileMaterial tileMaterial_;
-    Array<TileDrawCall> drawCalls_;
+    SpriteMaterial spriteMaterial_;
+    Array<SpriteDrawCall> drawCalls_;
 };
 
 }

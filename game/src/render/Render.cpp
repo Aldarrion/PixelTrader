@@ -10,7 +10,7 @@
 #include "render/hs_Vulkan.h"
 
 #include "game/DrawCanvas.h"
-#include "game/TileRenderer.h"
+#include "game/SpriteRenderer.h"
 #include "game/DebugShapeRenderer.h"
 
 #include "game/Serialization.h"
@@ -888,7 +888,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     //materials_.Add(new TexturedTriangleMaterial());
     //materials_.Add(new ShapeMaterial());
     //materials_.Add(new PhongMaterial());
-    //materials_.Add(new TileMaterial());
+    //materials_.Add(new SpriteMaterial());
     
     for (int i = 0; i < materials_.Count(); ++i)
     {
@@ -910,8 +910,8 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     if (drawCanvas_ && HS_FAILED(drawCanvas_->Init()))
         return R_FAIL;
 
-    tileRenderer_ = MakeUnique<TileRenderer>();
-    if (tileRenderer_ && HS_FAILED(tileRenderer_->Init()))
+    spriteRenderer_ = MakeUnique<SpriteRenderer>();
+    if (spriteRenderer_ && HS_FAILED(spriteRenderer_->Init()))
         return R_FAIL;
 
     debugShapeRenderer_ = MakeUnique<DebugShapeRenderer>();
@@ -1362,8 +1362,8 @@ void Render::Update(float dTime)
     if (drawCanvas_)
         drawCanvas_->Draw();
 
-    if (tileRenderer_)
-        tileRenderer_->Draw();
+    if (spriteRenderer_)
+        spriteRenderer_->Draw();
 
     if (debugShapeRenderer_)
         debugShapeRenderer_->Draw();
@@ -1584,9 +1584,9 @@ Camera& Render::GetCamera()
 }
 
 //------------------------------------------------------------------------------
-TileRenderer* Render::GetTileRenderer() const
+SpriteRenderer* Render::GetSpriteRenderer() const
 {
-    return tileRenderer_.Get();
+    return spriteRenderer_.Get();
 }
 
 //------------------------------------------------------------------------------

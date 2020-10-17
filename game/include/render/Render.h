@@ -60,7 +60,7 @@ class DynamicUBOCache;
 class VertexBufferCache;
 
 class DrawCanvas;
-class TileRenderer;
+class SpriteRenderer;
 class DebugShapeRenderer;
 
 class SerializationManager;
@@ -167,8 +167,8 @@ public:
     const Camera& GetCamera() const;
     Camera& GetCamera();
 
-    // Tile renderer
-    TileRenderer* GetTileRenderer() const;
+    // Sprite renderer
+    SpriteRenderer* GetSpriteRenderer() const;
 
     // Debug shape renderer
     DebugShapeRenderer* GetDebugShapeRenderer() const;
@@ -279,7 +279,7 @@ private:
     Array<UniquePtr<Material>>  materials_;
     UniquePtr<DrawCanvas>       drawCanvas_;
 
-    UniquePtr<TileRenderer>         tileRenderer_;
+    UniquePtr<SpriteRenderer>       spriteRenderer_;
     UniquePtr<DebugShapeRenderer>   debugShapeRenderer_;
 
     //----------------------

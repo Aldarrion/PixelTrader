@@ -35,7 +35,7 @@ struct SceneData
     Vec4    ViewPos;
 };
 
-struct TileData
+struct SpriteData
 {
     Mat44 World;
 };
