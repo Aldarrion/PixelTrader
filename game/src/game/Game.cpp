@@ -97,6 +97,7 @@ void Game::AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider)
 void Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider)
 {
     characters_.Positions.Add(pos);
+    characters_.Velocities.Add(Vec2::ZERO());
     characters_.Animations.Add(animation);
     characters_.Sprites.Add(animation.GetCurrentSprite());
     characters_.Colliders.Add(collider);
@@ -338,7 +339,6 @@ float height = 32;
 float timeToJump = 0.3f;
 float jumpVelocity = (2 * height) / (timeToJump);
 float gravity = (-2 * height) / Sqr(timeToJump);
-Vec2 velocity = Vec2::ZERO();
 float groundLevel = 8;
 
 //------------------------------------------------------------------------------
@@ -429,6 +429,7 @@ void Game::Update(float dTime)
 
     // Movement
     {
+        Vec2& velocity = characters_.Velocities[0];
         velocity.y += gravity * GetDTime();
         velocity.x = 0;
 
@@ -526,7 +527,7 @@ void Game::Update(float dTime)
                 angle,
                 &arrowSprite_,
                 Circle(Vec2(7, 2.5f), 2.5f),
-                dir * projectileSpeed
+                dir * projectileSpeed + characters_.Velocities[0]
             );
         }
 
@@ -548,7 +549,7 @@ void Game::Update(float dTime)
 
         // Collide projectiles
         {
-            for (int i = 0; i < projectiles_.Positions.Count();)
+            for (int i = 0; i < projectiles_.Positions.Count(); ++i)
             {
                 Mat44 projectileTransform = MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_);
                 Vec2 projPos = projectileTransform.TransformPos(projectiles_.TipColliders[i].center_);
@@ -564,8 +565,6 @@ void Game::Update(float dTime)
                         break;
                     }
                 }
-
-                ++i;
             }
         }
     }

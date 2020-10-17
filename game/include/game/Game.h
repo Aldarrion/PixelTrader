@@ -60,6 +60,7 @@ struct ObjectArchetype
 struct CharacterArchetype
 {
     Array<Vec3>             Positions;
+    Array<Vec2>             Velocities;
     Array<Sprite*>          Sprites;
     Array<AnimationState>   Animations;
     Array<Box2D>            Colliders;
