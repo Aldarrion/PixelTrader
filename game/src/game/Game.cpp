@@ -508,6 +508,17 @@ void Game::Update(float dTime)
         Camera& cam = g_Render->GetCamera();
         cam.SetPosition(Vec2{ pos.x, pos.y } + (characters_.Sprites[0]->size_ / 2.0f)); // Center the camera pos at the center of the player
         cam.UpdateMatrics();
+
+        static Vec2 maxPlayerVelocity(Vec2::ZERO());
+        static Vec2 minPlayerVelocity(Vec2::ZERO());
+        maxPlayerVelocity.x = Max(maxPlayerVelocity.x, velocity.x);
+        maxPlayerVelocity.y = Max(maxPlayerVelocity.y, velocity.y);
+        minPlayerVelocity.x = Min(minPlayerVelocity.x, velocity.x);
+        minPlayerVelocity.y = Min(minPlayerVelocity.y, velocity.y);
+
+        ImGui::Text("Cur player velocity: [%.2f, %.2f]", velocity.x, velocity.y);
+        ImGui::Text("Max player velocity: [%.2f, %.2f]", maxPlayerVelocity.x, maxPlayerVelocity.y);
+        ImGui::Text("Min player velocity: [%.2f, %.2f]", minPlayerVelocity.x, minPlayerVelocity.y);
     }
 
     // Shooting
@@ -524,12 +535,13 @@ void Game::Update(float dTime)
 
             float angle = RotationFromDirection(dir);
 
+            Vec2 projectileVelocity = dir * projectileSpeed + characters_.Velocities[0];
             AddProjectile(
                 Vec3(projPos.x, projPos.y, 0.5f),
                 angle,
                 &arrowSprite_,
                 Circle(Vec2(7, 2.5f), 2.5f),
-                dir * projectileSpeed + characters_.Velocities[0]
+                projectileVelocity
             );
         }
 
@@ -541,6 +553,8 @@ void Game::Update(float dTime)
                 projectiles_.Positions[i].AddXY(projectiles_.Velocities[i] * GetDTime());
 
                 projectiles_.Rotations[i] = RotationFromDirection(projectiles_.Velocities[i].Normalized());
+
+                ImGui::Text("Projectile velocity: [%.2f, %.2f]", projectiles_.Velocities[i].x, projectiles_.Velocities[i].y);
 
                 if (projectiles_.Positions[i].y < -1000)
                     RemoveProjectile(i);
