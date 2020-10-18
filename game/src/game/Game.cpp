@@ -430,31 +430,37 @@ void Game::Update(float dTime)
     }
 
     // Movement
+    float focusMultiplier = 1.0f;
     {
+        if (g_Input->GetState(VK_LSHIFT))
+        {
+            focusMultiplier = 0.25f;
+        }
+
         Vec2& velocity = characters_.Velocities[0];
-        velocity.y += gravity * GetDTime();
+        velocity.y += gravity * GetDTime() * focusMultiplier;
         velocity.x = 0;
 
-        float speed{ 60 };
-        if (isGrounded && g_Input->IsKeyDown('W'))
+        float characterSpeed{ 80 };
+        if (isGrounded && g_Input->IsKeyDown(VK_SPACE))
         {
             velocity.y = jumpVelocity;
         }
 
         if (g_Input->GetState('D'))
         {
-            velocity.x += speed;
+            velocity.x += characterSpeed;
         }
         else if (g_Input->GetState('A'))
         {
-            velocity.x -= speed;
+            velocity.x -= characterSpeed;
         }
 
         Vec3& pos = characters_.Positions[0];
 
         isGrounded = false;
 
-        Vec2 dtVel = velocity * GetDTime();
+        Vec2 dtVel = velocity * GetDTime() * focusMultiplier;
 
         Vec2 pos2 = pos.XY();
         const Box2D& originalCollider = characters_.Colliders[0];
@@ -523,6 +529,10 @@ void Game::Update(float dTime)
 
     // Shooting
     {
+        ImGui::Begin("Settings");
+            ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
+        ImGui::End();
+
         timeToShoot = Max(timeToShoot - dTime, 0.0f);
         if (g_Input->IsButtonDown(BTN_LEFT) && timeToShoot <= 0)
         {
@@ -535,7 +545,8 @@ void Game::Update(float dTime)
 
             float angle = RotationFromDirection(dir);
 
-            Vec2 projectileVelocity = dir * projectileSpeed + characters_.Velocities[0];
+            constexpr float PLAYER_VELOCITY_WEIGHT = 0.7f;
+            Vec2 projectileVelocity = dir * projectileSpeed + characters_.Velocities[0] * PLAYER_VELOCITY_WEIGHT * focusMultiplier;
             AddProjectile(
                 Vec3(projPos.x, projPos.y, 0.5f),
                 angle,
