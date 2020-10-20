@@ -128,15 +128,37 @@ static void HsDestroyImgui()
 }
 
 //------------------------------------------------------------------------------
+void ParseCmdLine(const char* commandLine, uint& width, uint& height)
+{
+    constexpr const char* WINDOW_STR = "-window";
+    const char* windowStart = strstr(commandLine, WINDOW_STR);
+    if (windowStart)
+    {
+        windowStart += strlen(WINDOW_STR);
+        uint w, h;
+
+        int matched = sscanf(windowStart, "=%u,%u%*c", &w, &h);
+        if (matched == 2)
+        {
+            width = w;
+            height = h;
+        }
+    }
+
+}
+
+//------------------------------------------------------------------------------
 int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, int showCmd)
 {
     hs::Log(hs::LogLevel::Info, "VkRenderer start\n");
 
-    int WIDTH = 1280;
-    int HEIGHT = 720;
+    uint width = 1280;
+    uint height = 720;
+
+    ParseCmdLine(cmdLine, width, height);
 
     // Window
-    if (FAILED(InitWindow(WIDTH, HEIGHT, instance)))
+    if (FAILED(InitWindow(width, height, instance)))
         return -1;
 
     // Resource manager
@@ -154,7 +176,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     }
 
     // Render
-    if (FAILED(hs::CreateRender(WIDTH, HEIGHT)))
+    if (FAILED(hs::CreateRender(width, height)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to create render");
         return -1;
