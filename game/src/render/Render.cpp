@@ -217,16 +217,392 @@ VkBool32 ValidationCallback(
 }
 
 //------------------------------------------------------------------------------
+RESULT Render::ResizeWindow(uint width, uint height)
+{
+    FlushGpu<false, true>();
+
+    ClearPipelineCache();
+
+    pipelineCache_.clear();
+
+    DestroySwapchain();
+    DestroySurface();
+
+    width_ = width;
+    height_ = height;
+
+    if (HS_FAILED(CreateSurface()))
+        return R_FAIL;
+
+    auto oldBBIdx = currentBBIdx_;
+    if (HS_FAILED(CreateSwapchain()))
+        return R_FAIL;
+
+    // TODO(pavel): This is not nice, we should not use currentBBIdx_ given from vkAcquireNextImageKHR, 
+    if (oldBBIdx != currentBBIdx_)
+    {
+        std::swap(directQueueFences_[currentBBIdx_], directQueueFences_[oldBBIdx]);
+    }
+
+    // TODO(pavel): Is this necessary here? Swapchain format could change so it may be a good idea to do it.
+    DestroyMainRenderPass();
+    if (HS_FAILED(CreateMainRenderPass()))
+        return R_FAIL;
+
+    DestroyMainFrameBuffer();
+    if (HS_FAILED(CreateMainFrameBuffer()))
+        return R_FAIL;
+
+    vkFreeCommandBuffers(vkDevice_, directCmdPool_, BB_IMG_COUNT, directCmdBuffers_);
+
+    VkCommandBufferAllocateInfo cmdBufferInfo{};
+    cmdBufferInfo.sType                 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufferInfo.commandPool           = directCmdPool_;
+    cmdBufferInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufferInfo.commandBufferCount    = BB_IMG_COUNT;
+
+    if (VKR_FAILED(vkAllocateCommandBuffers(vkDevice_, &cmdBufferInfo, directCmdBuffers_)))
+        return R_FAIL;
+
+    for (int i = 0; i < BB_IMG_COUNT; ++i)
+    {
+        if (VKR_FAILED(SetDiagName(vkDevice_, (uint64)directCmdBuffers_[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "DirectCmdBuffer")))
+            return R_FAIL;
+    }
+
+    //-----------------------
+    // Init command buffer
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+RESULT Render::CreateSurface()
+{
+    VkWin32SurfaceCreateInfoKHR winSurfaceInfo{};
+    winSurfaceInfo.sType        = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    winSurfaceInfo.hinstance    = hinst_;
+    winSurfaceInfo.hwnd         = hwnd_;
+
+    if (VKR_FAILED(vkCreateWin32SurfaceKHR(vkInstance_, &winSurfaceInfo, nullptr, &vkSurface_)))
+        return R_FAIL;
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+RESULT Render::CreateSwapchain()
+{
+    VkBool32 presentSupport{};
+    if (VKR_FAILED(vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice_, directQueueFamilyIdx_, vkSurface_, &presentSupport)))
+        return R_FAIL;
+
+    if (!presentSupport)
+    {
+        Log(LogLevel::Error, "Physical device & queue does not support present");
+        return R_FAIL;
+    }
+
+    uint surfaceFmtCount;
+    if (VKR_FAILED(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice_, vkSurface_, &surfaceFmtCount, nullptr)))
+        return R_FAIL;
+    auto formats = HS_ALLOCA(VkSurfaceFormatKHR, surfaceFmtCount);
+    if (VKR_FAILED(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice_, vkSurface_, &surfaceFmtCount, formats)))
+        return R_FAIL;
+
+    bool formatFound = false;
+    for (uint i = 0; !formatFound && i < surfaceFmtCount; ++i)
+    {
+        if (formats[i].colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR && formats[i].format == VK_FORMAT_B8G8R8A8_SRGB)
+            formatFound = true;
+    }
+
+    if (!formatFound)
+    {
+        Log(LogLevel::Error, "SRGB nonlinear + B8G8R8A8_SRGB surface format not supported");
+        return R_FAIL;
+    }
+
+    uint presentModeCount{};
+    if (VKR_FAILED(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice_, vkSurface_, &presentModeCount, nullptr)))
+        return R_FAIL;
+    auto presentModes = HS_ALLOCA(VkPresentModeKHR, presentModeCount);
+    if (VKR_FAILED(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice_, vkSurface_, &presentModeCount, presentModes)))
+        return R_FAIL;
+
+    bool modeFound = false;
+    for (uint i = 0; !modeFound && i < presentModeCount; ++i)
+    {
+        if (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+            modeFound = true;
+    }
+
+    if (!modeFound)
+    {
+        Log(LogLevel::Error, "VK_PRESENT_MODE_IMMEDIATE_KHR not supported");
+        return R_FAIL;
+    }
+
+    vkSurfaceCapabilities_ = {};
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice_, vkSurface_, &vkSurfaceCapabilities_);
+
+    VkSwapchainCreateInfoKHR swapchainInfo{};
+    swapchainInfo.sType             = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchainInfo.surface           = vkSurface_;
+    swapchainInfo.minImageCount     = 2;
+    swapchainInfo.imageFormat       = swapChainFormat_ = VK_FORMAT_B8G8R8A8_SRGB;
+    swapchainInfo.imageColorSpace   = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swapchainInfo.imageExtent       = VkExtent2D{ width_, height_ };
+    swapchainInfo.imageArrayLayers  = 1; // Non-stereoscopic view
+    swapchainInfo.imageUsage        = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT if not drawing directly to images
+    swapchainInfo.imageSharingMode  = VK_SHARING_MODE_EXCLUSIVE; // We assume the same queue will draw and present
+    swapchainInfo.preTransform      = vkSurfaceCapabilities_.currentTransform;
+    swapchainInfo.compositeAlpha    = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchainInfo.presentMode       = VK_PRESENT_MODE_IMMEDIATE_KHR; //VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+    swapchainInfo.clipped           = VK_FALSE; // Just to be safe VK_TRUE if we know we will never read the buffers back
+
+    if (VKR_FAILED(vkCreateSwapchainKHR(vkDevice_, &swapchainInfo, nullptr, &vkSwapchain_)))
+        return R_FAIL;
+
+    //-----------------------
+    // Get current back buffer
+    uint swapchainImageCount{};
+    if (VKR_FAILED(vkGetSwapchainImagesKHR(vkDevice_, vkSwapchain_, &swapchainImageCount, nullptr)))
+        return R_FAIL;
+
+    hs_assert(swapchainImageCount == 2 && "We kind of assume 2 is the number");
+
+    if (VKR_FAILED(vkGetSwapchainImagesKHR(vkDevice_, vkSwapchain_, &swapchainImageCount, bbImages_)))
+        return R_FAIL;
+
+    if (VKR_FAILED(vkAcquireNextImageKHR(vkDevice_, vkSwapchain_, (uint64)-1, VK_NULL_HANDLE, nextImageFence_, &currentBBIdx_)))
+        return R_FAIL;
+
+    if (FAILED(WaitForFence(nextImageFence_)))
+        return R_FAIL;
+
+    //-----------------------
+    // Create swapchain views
+    for (int i = 0; i < BB_IMG_COUNT; ++i)
+    {
+        VkImageSubresourceRange subresource{};
+        subresource.aspectMask      = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresource.baseMipLevel    = 0;
+        subresource.levelCount      = 1;
+        subresource.baseArrayLayer  = 0;
+        subresource.layerCount      = 1;
+
+        VkImageViewCreateInfo imageViewInfo{};
+        imageViewInfo.sType             = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageViewInfo.image             = bbImages_[i];
+        imageViewInfo.viewType          = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewInfo.format            = swapChainFormat_;
+        imageViewInfo.components        = VkComponentMapping { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+        imageViewInfo.subresourceRange  = subresource;
+        
+        if (VKR_FAILED(vkCreateImageView(vkDevice_, &imageViewInfo, nullptr, &bbViews_[i])))
+            return R_FAIL;
+        
+        if (VKR_FAILED(SetDiagName(vkDevice_, (uint64)bbImages_[i], VK_OBJECT_TYPE_IMAGE, "BackBuffer")))
+            return R_FAIL;
+
+        VkImageCreateInfo depthImageInfo{};
+        depthImageInfo.sType            = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        depthImageInfo.imageType        = VK_IMAGE_TYPE_2D;
+        depthImageInfo.format           = VK_FORMAT_D24_UNORM_S8_UINT;
+        depthImageInfo.extent           = VkExtent3D{ width_, height_, 1 };
+        depthImageInfo.mipLevels        = 1;
+        depthImageInfo.arrayLayers      = 1;
+        depthImageInfo.samples          = VK_SAMPLE_COUNT_1_BIT;
+        depthImageInfo.tiling           = VK_IMAGE_TILING_OPTIMAL;
+        depthImageInfo.usage            = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        depthImageInfo.sharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+
+        VmaAllocationCreateInfo depthAllocInfo{};
+        depthAllocInfo.usage            = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        if (VKR_FAILED(vmaCreateImage(allocator_, &depthImageInfo, &depthAllocInfo, &depthImages_[i], &depthMemory_[i], nullptr)))
+            return R_FAIL;
+
+        VkImageViewCreateInfo depthViewInfo{};
+        depthViewInfo.sType               = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        depthViewInfo.image               = depthImages_[i];
+        depthViewInfo.viewType            = VK_IMAGE_VIEW_TYPE_2D;
+        depthViewInfo.format              = VK_FORMAT_D24_UNORM_S8_UINT;
+        
+        depthViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        depthViewInfo.subresourceRange.baseMipLevel = 0;
+        depthViewInfo.subresourceRange.levelCount = 1;
+        depthViewInfo.subresourceRange.baseArrayLayer = 0;
+        depthViewInfo.subresourceRange.layerCount = 1;
+
+        if (VKR_FAILED(vkCreateImageView(vkDevice_, &depthViewInfo, nullptr, &depthViews_[i])))
+            return R_FAIL;
+    }
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+RESULT Render::CreateMainRenderPass()
+{
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format          = swapChainFormat_;
+    colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment   = 0;
+    colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    //VkAttachmentDescription depthAttachment{};
+    //depthAttachment.format          = VK_FORMAT_D24_UNORM_S8_UINT;
+    //depthAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
+    //depthAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    //depthAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    //depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+    //depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment   = 1;
+    depthAttachmentRef.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount    = 1;
+    subpass.pColorAttachments       = &colorAttachmentRef;
+    //subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    /*VkSubpassDependency dependency{};
+    dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass       = 0;
+    dependency.srcStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask    = 0;
+    dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
+
+    VkAttachmentDescription attachments[] = { colorAttachment/*, depthAttachment*/ };
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = hs_arr_len(attachments);
+    renderPassInfo.pAttachments = attachments;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    //renderPassInfo.dependencyCount = 1;
+    //renderPassInfo.pDependencies = &dependency;
+
+    hs_assert(!mainRenderPass_);
+
+    if (VKR_FAILED(vkCreateRenderPass(vkDevice_, &renderPassInfo, nullptr, &mainRenderPass_)))
+        return R_FAIL;
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+RESULT Render::CreateMainFrameBuffer()
+{
+    for (int bbIdx = 0; bbIdx < BB_IMG_COUNT; ++bbIdx)
+    {
+        VkImageView viewAttachments[] = { bbViews_[bbIdx]/*, depthViews_[bbIdx]*/ };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = mainRenderPass_;
+        framebufferInfo.attachmentCount = hs_arr_len(viewAttachments);
+        framebufferInfo.pAttachments    = viewAttachments;
+        framebufferInfo.width           = width_;
+        framebufferInfo.height          = height_;
+        framebufferInfo.layers          = 1;
+
+        hs_assert(!mainFrameBuffer_[bbIdx]);
+        if (VKR_FAILED(vkCreateFramebuffer(vkDevice_, &framebufferInfo, nullptr, &mainFrameBuffer_[bbIdx])))
+            return R_FAIL;
+    }
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+void Render::DestroySurface()
+{
+    if (vkSurface_)
+    {
+        vkDestroySurfaceKHR(vkInstance_, vkSurface_, nullptr);
+        vkSurface_ = VK_NULL_HANDLE;
+    }
+}
+
+//------------------------------------------------------------------------------
+void Render::DestroySwapchain()
+{
+    vkDestroySwapchainKHR(vkDevice_, vkSwapchain_, nullptr);
+    vkSwapchain_ = VK_NULL_HANDLE;
+
+    for (int bbIdx = 0; bbIdx < BB_IMG_COUNT; ++bbIdx)
+    {
+        vkDestroyImageView(vkDevice_, bbViews_[bbIdx], nullptr);
+        bbViews_[bbIdx] = VK_NULL_HANDLE;
+
+        vkDestroyImageView(vkDevice_, depthViews_[bbIdx], nullptr);
+        depthViews_[bbIdx] = VK_NULL_HANDLE;
+
+        vmaDestroyImage(allocator_, depthImages_[bbIdx], depthMemory_[bbIdx]);
+    }
+}
+
+//------------------------------------------------------------------------------
+void Render::DestroyMainRenderPass()
+{
+    if (mainRenderPass_)
+    {
+        vkDestroyRenderPass(vkDevice_, mainRenderPass_, nullptr);
+        mainRenderPass_ = VK_NULL_HANDLE;
+    }
+}
+
+//------------------------------------------------------------------------------
+void Render::DestroyMainFrameBuffer()
+{
+    for (int bbIdx = 0; bbIdx < BB_IMG_COUNT; ++bbIdx)
+    {
+        if (mainFrameBuffer_[bbIdx])
+        {
+            vkDestroyFramebuffer(vkDevice_, mainFrameBuffer_[bbIdx], nullptr);
+            mainFrameBuffer_[bbIdx] = VK_NULL_HANDLE;
+        }
+    }
+}
+
+//------------------------------------------------------------------------------
 RESULT Render::ReloadShaders()
 {
     hs_assert(shaderManager_);
 
+    ClearPipelineCache();
+
+    return shaderManager_->ReloadShaders();
+}
+
+//------------------------------------------------------------------------------
+void Render::ClearPipelineCache()
+{
     for (auto pl : pipelineCache_)
         destroyPipelines_[currentBBIdx_].Add(pl.second);
 
     pipelineCache_.clear();
-
-    return shaderManager_->ReloadShaders();
 }
 
 //------------------------------------------------------------------------------
@@ -241,7 +617,7 @@ RESULT Render::WaitForFence(VkFence fence)
 
     if (fenceVal == VK_NOT_READY)
     {
-        if (VKR_FAILED(vkWaitForFences(vkDevice_, 1, &fence, VK_TRUE, (uint64)-1)))
+        if (VKR_FAILED(vkWaitForFences(vkDevice_, 1, &fence, VK_TRUE, 1000 * 1000 * 1000)))
             return R_FAIL;
     }
 
@@ -296,6 +672,7 @@ void Render::TransitionBarrier(
 RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 {
     hwnd_ = hwnd;
+    hinst_ = hinst;
 
     //-----------------------
     // Create Vulkan instance
@@ -354,14 +731,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     #endif
 
     //-----------------------
-    // Create surface
-    VkWin32SurfaceCreateInfoKHR winSurfaceInfo{};
-    winSurfaceInfo.sType        = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    winSurfaceInfo.hinstance    = hinst;
-    winSurfaceInfo.hwnd         = hwnd_;
-
-    if (VKR_FAILED(vkCreateWin32SurfaceKHR(vkInstance_, &winSurfaceInfo, nullptr, &vkSurface_)))
-        return R_FAIL;
+    CreateSurface();
 
     //-----------------------
     // Find physical device
@@ -470,79 +840,6 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     }
 
     //-----------------------
-    // Create swapchain
-    VkBool32 presentSupport{};
-    if (VKR_FAILED(vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice_, directQueueFamilyIdx_, vkSurface_, &presentSupport)))
-        return R_FAIL;
-
-    if (!presentSupport)
-    {
-        Log(LogLevel::Error, "Physical device & queue does not support present");
-        return R_FAIL;
-    }
-
-    uint surfaceFmtCount;
-    if (VKR_FAILED(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice_, vkSurface_, &surfaceFmtCount, nullptr)))
-        return R_FAIL;
-    auto formats = HS_ALLOCA(VkSurfaceFormatKHR, surfaceFmtCount);
-    if (VKR_FAILED(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice_, vkSurface_, &surfaceFmtCount, formats)))
-        return R_FAIL;
-
-    bool formatFound = false;
-    for (uint i = 0; !formatFound && i < surfaceFmtCount; ++i)
-    {
-        if (formats[i].colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR && formats[i].format == VK_FORMAT_B8G8R8A8_SRGB)
-            formatFound = true;
-    }
-
-    if (!formatFound)
-    {
-        Log(LogLevel::Error, "SRGB nonlinear + B8G8R8A8_SRGB surface format not supported");
-        return R_FAIL;
-    }
-
-    uint presentModeCount{};
-    if (VKR_FAILED(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice_, vkSurface_, &presentModeCount, nullptr)))
-        return R_FAIL;
-    auto presentModes = HS_ALLOCA(VkPresentModeKHR, presentModeCount);
-    if (VKR_FAILED(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice_, vkSurface_, &presentModeCount, presentModes)))
-        return R_FAIL;
-
-    bool modeFound = false;
-    for (uint i = 0; !modeFound && i < presentModeCount; ++i)
-    {
-        if (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-            modeFound = true;
-    }
-
-    if (!modeFound)
-    {
-        Log(LogLevel::Error, "VK_PRESENT_MODE_IMMEDIATE_KHR not supported");
-        return R_FAIL;
-    }
-
-    VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice_, vkSurface_, &capabilities);
-
-    VkSwapchainCreateInfoKHR swapchainInfo{};
-    swapchainInfo.sType             = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchainInfo.surface           = vkSurface_;
-    swapchainInfo.minImageCount     = 2;
-    swapchainInfo.imageFormat       = swapChainFormat_ = VK_FORMAT_B8G8R8A8_SRGB;
-    swapchainInfo.imageColorSpace   = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swapchainInfo.imageExtent       = VkExtent2D{ width_, height_ };
-    swapchainInfo.imageArrayLayers  = 1; // Non-stereoscopic view
-    swapchainInfo.imageUsage        = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT if not drawing directly to images
-    swapchainInfo.imageSharingMode  = VK_SHARING_MODE_EXCLUSIVE; // We assume the same queue will draw and present
-    swapchainInfo.preTransform      = capabilities.currentTransform;
-    swapchainInfo.compositeAlpha    = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchainInfo.presentMode       = VK_PRESENT_MODE_IMMEDIATE_KHR; //VK_PRESENT_MODE_FIFO_RELAXED_KHR;
-    swapchainInfo.clipped           = VK_FALSE; // Just to be safe VK_TRUE if we know we will never read the buffers back
-
-    if (VKR_FAILED(vkCreateSwapchainKHR(vkDevice_, &swapchainInfo, nullptr, &vkSwapchain_)))
-        return R_FAIL;
-
-    //-----------------------
     // Create fences
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -570,85 +867,12 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     }
 
     //-----------------------
-    // Get current back buffer
-    uint swapchainImageCount{};
-    if (VKR_FAILED(vkGetSwapchainImagesKHR(vkDevice_, vkSwapchain_, &swapchainImageCount, nullptr)))
-        return R_FAIL;
-
-    hs_assert(swapchainImageCount < 10);
-    DBG_LOG("Swapchain image count: %d", swapchainImageCount);
-
-    if (VKR_FAILED(vkGetSwapchainImagesKHR(vkDevice_, vkSwapchain_, &swapchainImageCount, bbImages_)))
-        return R_FAIL;
-
-    if (VKR_FAILED(vkAcquireNextImageKHR(vkDevice_, vkSwapchain_, (uint64)-1, VK_NULL_HANDLE, nextImageFence_, &currentBBIdx_)))
-        return R_FAIL;
-
-    if (FAILED(WaitForFence(nextImageFence_)))
+    if (HS_FAILED(CreateSwapchain()))
         return R_FAIL;
 
     // All backbuffers are ready except for the current one we will use right away
     if (VKR_FAILED(vkResetFences(vkDevice_, 1, &directQueueFences_[currentBBIdx_])))
         return R_FAIL;
-
-    //-----------------------
-    // Create swapchain views
-    for (int i = 0; i < BB_IMG_COUNT; ++i)
-    {
-        VkImageSubresourceRange subresource{};
-        subresource.aspectMask      = VK_IMAGE_ASPECT_COLOR_BIT;
-        subresource.baseMipLevel    = 0;
-        subresource.levelCount      = 1;
-        subresource.baseArrayLayer  = 0;
-        subresource.layerCount      = 1;
-
-        VkImageViewCreateInfo imageViewInfo{};
-        imageViewInfo.sType             = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        imageViewInfo.image             = bbImages_[i];
-        imageViewInfo.viewType          = VK_IMAGE_VIEW_TYPE_2D;
-        imageViewInfo.format            = swapChainFormat_;
-        imageViewInfo.components        = VkComponentMapping { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
-        imageViewInfo.subresourceRange  = subresource;
-        
-        if (VKR_FAILED(vkCreateImageView(vkDevice_, &imageViewInfo, nullptr, &bbViews_[i])))
-            return R_FAIL;
-        
-        if (VKR_FAILED(SetDiagName(vkDevice_, (uint64)bbImages_[i], VK_OBJECT_TYPE_IMAGE, "BackBuffer")))
-            return R_FAIL;
-
-        VkImageCreateInfo depthImageInfo{};
-        depthImageInfo.sType            = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        depthImageInfo.imageType        = VK_IMAGE_TYPE_2D;
-        depthImageInfo.format           = VK_FORMAT_D24_UNORM_S8_UINT;
-        depthImageInfo.extent           = VkExtent3D{ width_, height_, 1 };
-        depthImageInfo.mipLevels        = 1;
-        depthImageInfo.arrayLayers      = 1;
-        depthImageInfo.samples          = VK_SAMPLE_COUNT_1_BIT;
-        depthImageInfo.tiling           = VK_IMAGE_TILING_OPTIMAL;
-        depthImageInfo.usage            = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        depthImageInfo.sharingMode      = VK_SHARING_MODE_EXCLUSIVE;
-
-        VmaAllocationCreateInfo depthAllocInfo{};
-        depthAllocInfo.usage            = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        if (VKR_FAILED(vmaCreateImage(allocator_, &depthImageInfo, &depthAllocInfo, &depthImages_[i], &depthMemory_[i], nullptr)))
-            return R_FAIL;
-
-        VkImageViewCreateInfo depthViewInfo{};
-        depthViewInfo.sType               = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        depthViewInfo.image               = depthImages_[i];
-        depthViewInfo.viewType            = VK_IMAGE_VIEW_TYPE_2D;
-        depthViewInfo.format              = VK_FORMAT_D24_UNORM_S8_UINT;
-        
-        depthViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        depthViewInfo.subresourceRange.baseMipLevel = 0;
-        depthViewInfo.subresourceRange.levelCount = 1;
-        depthViewInfo.subresourceRange.baseArrayLayer = 0;
-        depthViewInfo.subresourceRange.layerCount = 1;
-
-        if (VKR_FAILED(vkCreateImageView(vkDevice_, &depthViewInfo, nullptr, &depthViews_[i])))
-            return R_FAIL;
-    }
 
     //-----------------------
     // Create command pools and buffers
@@ -674,6 +898,14 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         if (VKR_FAILED(SetDiagName(vkDevice_, (uint64)directCmdBuffers_[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "DirectCmdBuffer")))
             return R_FAIL;
     }
+
+    //-----------------------
+    // Init command buffer
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
 
     //-----------------------
     // Pipeline layout
@@ -871,14 +1103,6 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     if (FAILED(vbCache_->Init()))
         return R_FAIL;
 
-    //-----------------------
-    // Init command buffer
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
-
     if (FAILED(CreateMainRenderPass()))
         return R_FAIL;
 
@@ -927,93 +1151,6 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         return R_FAIL;
 
     state_.Reset();
-
-    return R_OK;
-}
-
-//------------------------------------------------------------------------------
-RESULT Render::CreateMainRenderPass()
-{
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format          = swapChainFormat_;
-    colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment   = 0;
-    colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    //VkAttachmentDescription depthAttachment{};
-    //depthAttachment.format          = VK_FORMAT_D24_UNORM_S8_UINT;
-    //depthAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
-    //depthAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    //depthAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    //depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    //depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    //depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-    //depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef{};
-    depthAttachmentRef.attachment   = 1;
-    depthAttachmentRef.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount    = 1;
-    subpass.pColorAttachments       = &colorAttachmentRef;
-    //subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    /*VkSubpassDependency dependency{};
-    dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass       = 0;
-    dependency.srcStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask    = 0;
-    dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
-
-    VkAttachmentDescription attachments[] = { colorAttachment/*, depthAttachment*/ };
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = hs_arr_len(attachments);
-    renderPassInfo.pAttachments = attachments;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    //renderPassInfo.dependencyCount = 1;
-    //renderPassInfo.pDependencies = &dependency;
-
-    hs_assert(!mainRenderPass_);
-
-    if (VKR_FAILED(vkCreateRenderPass(vkDevice_, &renderPassInfo, nullptr, &mainRenderPass_)))
-        return R_FAIL;
-
-    return R_OK;
-}
-
-//------------------------------------------------------------------------------
-RESULT Render::CreateMainFrameBuffer()
-{
-    for (int bbIdx = 0; bbIdx < BB_IMG_COUNT; ++bbIdx)
-    {
-        VkImageView viewAttachments[] = { bbViews_[bbIdx]/*, depthViews_[bbIdx]*/ };
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass      = mainRenderPass_;
-        framebufferInfo.attachmentCount = hs_arr_len(viewAttachments);
-        framebufferInfo.pAttachments    = viewAttachments;
-        framebufferInfo.width           = width_;
-        framebufferInfo.height          = height_;
-        framebufferInfo.layers          = 1;
-
-        hs_assert(!mainFrameBuffer_[bbIdx]);
-        if (VKR_FAILED(vkCreateFramebuffer(vkDevice_, &framebufferInfo, nullptr, &mainFrameBuffer_[bbIdx])))
-            return R_FAIL;
-    }
 
     return R_OK;
 }
@@ -1115,8 +1252,11 @@ void Render::FlushGpu()
     submit.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit.commandBufferCount   = 1;
     submit.pCommandBuffers      = &directCmdBuffers_[currentBBIdx_];
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores    = &submitSemaphores_[currentBBIdx_];
+    if (present)
+    {
+        submit.signalSemaphoreCount = 1;
+        submit.pSignalSemaphores    = &submitSemaphores_[currentBBIdx_];
+    }
 
     VKR_CHECK(vkQueueSubmit(vkDirectQueue_, 1, &submit, directQueueFences_[currentBBIdx_]));
 

@@ -107,9 +107,12 @@ class Render
     friend void DestroyRender();
 
 public:
+    RESULT ResizeWindow(uint width, uint height);
     RESULT ReloadShaders();
     RESULT InitWin32(HWND hwnd, HINSTANCE hinst);
     RESULT InitImgui();
+
+    void ClearPipelineCache();
 
     // Setting state
     template<PipelineStage stage>
@@ -181,10 +184,13 @@ private:
     static constexpr uint BB_IMG_COUNT = 2;
 
     // Win32
-    HWND hwnd_;
+    HINSTANCE   hinst_;
+    HWND        hwnd_;
 
     uint                width_{};
     uint                height_{};
+
+    VkSurfaceCapabilitiesKHR vkSurfaceCapabilities_;
 
     // Core Vulkan
     VkInstance          vkInstance_{};
@@ -287,8 +293,15 @@ private:
     UniquePtr<SpriteRenderer>       spriteRenderer_;
     UniquePtr<DebugShapeRenderer>   debugShapeRenderer_;
 
+    RESULT CreateSurface();
+    RESULT CreateSwapchain();
     RESULT CreateMainRenderPass();
     RESULT CreateMainFrameBuffer();
+
+    void DestroySurface();
+    void DestroySwapchain();
+    void DestroyMainRenderPass();
+    void DestroyMainFrameBuffer();
 
     //----------------------
     // Vertex layout manager

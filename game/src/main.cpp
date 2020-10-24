@@ -25,6 +25,15 @@ HWND g_hwnd{};
 static bool g_isWindowActive = false;
 
 //------------------------------------------------------------------------------
+enum class WindowState
+{
+    Windowed,
+    BorderlessFs,
+    Count,
+};
+static WindowState g_WindowState = WindowState::Windowed;
+
+//------------------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
@@ -53,6 +62,21 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     return 0;
 }
 
+static uint GetWindowStyle(WindowState state)
+{
+    uint windowStyle;
+    if (state == WindowState::BorderlessFs)
+    {
+        windowStyle = WS_POPUP;
+    }
+    else // WindowState::Windowed
+    {
+        windowStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
+    }
+
+    return windowStyle;
+}
+
 //------------------------------------------------------------------------------
 static hs::RESULT InitWindow(int width, int height, HINSTANCE instance)
 {
@@ -71,13 +95,16 @@ static hs::RESULT InitWindow(int width, int height, HINSTANCE instance)
     }
 
     RECT rc = { 0, 0, width, height};
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+
+    uint windowStyle = GetWindowStyle(g_WindowState);
+
+    AdjustWindowRect(&rc, windowStyle, FALSE);
 
     g_hwnd = CreateWindowA(
         wCls.lpszClassName,
         "PixelTrader",
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT,
+        windowStyle,
+        0, 0,
         rc.right - rc.left, rc.bottom - rc.top,
         nullptr, nullptr,
         instance,
@@ -108,8 +135,6 @@ static hs::RESULT HsInitImguiWin32()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -128,9 +153,37 @@ static void HsDestroyImgui()
 }
 
 //------------------------------------------------------------------------------
-void ParseCmdLine(const char* commandLine, uint& width, uint& height)
+static void ToggleFullscreen()
+{
+    uint wsInt = (static_cast<uint>(g_WindowState) + 1) % static_cast<uint>(WindowState::Count);
+    g_WindowState = static_cast<WindowState>(wsInt);
+
+    int width = 1280;
+    int height = 720;
+    if (g_WindowState == WindowState::BorderlessFs)
+    {
+        width = GetSystemMetrics(SM_CXSCREEN);
+        height = GetSystemMetrics(SM_CYSCREEN);
+    }
+
+    uint windowStyle = GetWindowStyle(g_WindowState);
+    SetWindowLongPtrA(g_hwnd, GWL_STYLE, windowStyle);
+
+    RECT rc = { 0, 0, width, height};
+    AdjustWindowRect(&rc, windowStyle, FALSE);
+
+    SetWindowPos(g_hwnd, nullptr, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_FRAMECHANGED | SWP_NOMOVE);
+    ShowWindow(g_hwnd, SW_SHOW);
+
+    hs::g_Render->ResizeWindow(width, height);
+}
+
+//------------------------------------------------------------------------------
+void ParseCmdLine(const char* commandLine, uint& width, uint& height, WindowState& windowStyle)
 {
     constexpr const char* WINDOW_STR = "-window";
+    constexpr const char* FULLSCREEN_STR = "-fullscreen";
+
     const char* windowStart = strstr(commandLine, WINDOW_STR);
     if (windowStart)
     {
@@ -142,9 +195,17 @@ void ParseCmdLine(const char* commandLine, uint& width, uint& height)
         {
             width = w;
             height = h;
+            windowStyle = WindowState::Windowed;
         }
     }
 
+    const char* fullscreenStart = strstr(commandLine, FULLSCREEN_STR);
+    if (!windowStart && fullscreenStart)
+    {
+        windowStyle = WindowState::BorderlessFs;
+        width = GetSystemMetrics(SM_CXSCREEN);
+        height = GetSystemMetrics(SM_CYSCREEN);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -155,7 +216,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     uint width = 1280;
     uint height = 720;
 
-    ParseCmdLine(cmdLine, width, height);
+    ParseCmdLine(cmdLine, width, height, g_WindowState);
 
     // Window
     if (FAILED(InitWindow(width, height, instance)))
@@ -253,6 +314,10 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 
             switch (msg.message)
             {
+                case WM_SYSCHAR:
+                    if (msg.wParam == VK_RETURN && (HIWORD(msg.lParam) & KF_ALTDOWN))
+                        ToggleFullscreen();
+                    break;
                 case WM_QUIT:
                     shouldQuit = true;
                     break;
