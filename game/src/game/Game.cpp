@@ -85,9 +85,11 @@ void Game::AddSprite(const Vec3& pos, Sprite* sprite)
 }
 
 //------------------------------------------------------------------------------
-void Game::AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider)
+void Game::AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider)
 {
     objects_.Positions.Add(pos);
+    objects_.Animations.Add(animation);
+    auto sprite = animation.GetCurrentSprite();
     objects_.Sprites.Add(sprite);
     if (!collider)
         objects_.Colliders.Add(MakeBox2DPosSize(Vec2::ZERO(), sprite->size_));
@@ -148,6 +150,12 @@ void Game::AnimateSprites()
     {
         characters_.Animations[i].Update(dTime_);
         characters_.Sprites[i] = characters_.Animations[i].GetCurrentSprite();
+    }
+
+    for (int i = 0; i < objects_.Animations.Count(); ++i)
+    {
+        objects_.Animations[i].Update(dTime_);
+        objects_.Sprites[i] = objects_.Animations[i].GetCurrentSprite();
     }
 }
 
@@ -286,12 +294,19 @@ RESULT Game::InitWin32()
     if (HS_FAILED(MakeSimpleSprite("textures/Rock2.png", rockSprite_[1], Vec2::ZERO())))
         return R_FAIL;
 
+    if (HS_FAILED(MakeSimpleSprite("textures/Pumpkin1.png", pumpkinSprite_[0], Vec2::ZERO())))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleSprite("textures/Pumpkin2.png", pumpkinSprite_[1], Vec2::ZERO())))
+        return R_FAIL;
+
     if (HS_FAILED(MakeSimpleSprite("textures/Arrow.png", arrowSprite_, Vec2(0.5f, 0.5f))))
         return R_FAIL;
 
     if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_, Vec2::ZERO())))
         return R_FAIL;
 
+    //
     Array<AnimationSegment> rockIdleSegments;
     for (uint i = 0; i < hs_arr_len(rockSprite_); ++i)
         rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
@@ -299,11 +314,27 @@ RESULT Game::InitWin32()
     AnimationState rockIdle{};
     rockIdle.Init(rockIdleSegments);
 
-
     // ------------------------
     // Create initial map state
+    Array<AnimationSegment> pumpkinIdleSegments;
+    for (uint i = 0; i < hs_arr_len(pumpkinSprite_); ++i)
+        pumpkinIdleSegments.Add(AnimationSegment{ &pumpkinSprite_[i], 0.5f });
+
+    AnimationState pumpkinIdle{};
+    pumpkinIdle.Init(pumpkinIdleSegments);
+    Box2D pumpkinCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(12, 10));
+    AddObject(Vec3(3 * TILE_SIZE, 9, 1), pumpkinIdle, &pumpkinCollider);
+    AddObject(Vec3(1 * TILE_SIZE, 1.5 * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
+
+    //
+    Array<AnimationSegment> chestIdleSegments;
+    chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
+
+    AnimationState chestIdle{};
+    chestIdle.Init(chestIdleSegments);
+
     Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
-    AddObject(TilePos(0, 0.5f, 1), &goldChestSprite_, &chestCollider);
+    AddObject(TilePos(0, 0.5f, 1), chestIdle, &chestCollider);
 
     int left = -6;
     int width = 15;

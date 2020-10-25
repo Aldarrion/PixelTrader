@@ -40,6 +40,12 @@ public:
     }
 
     //------------------------------------------------------------------------------
+    constexpr bool IsEmpty() const
+    {
+        return count_ == 0;
+    }
+
+    //------------------------------------------------------------------------------
     constexpr T& operator[](uint64 index) const
     {
         hs_assert(index < count_);

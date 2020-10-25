@@ -51,9 +51,10 @@ struct SpriteArchetype
 //------------------------------------------------------------------------------
 struct ObjectArchetype
 {
-    Array<Vec3>     Positions;
-    Array<Sprite*>  Sprites;
-    Array<Box2D>    Colliders;
+    Array<Vec3>             Positions;
+    Array<Sprite*>          Sprites;
+    Array<AnimationState>   Animations;
+    Array<Box2D>            Colliders;
 };
 
 //------------------------------------------------------------------------------
@@ -133,6 +134,7 @@ private:
     Sprite groundSprite_[3 * 3]{};
     Sprite goldChestSprite_{};
     Sprite rockSprite_[2]{};
+    Sprite pumpkinSprite_[2]{};
     Sprite forestSprite_{};
     Sprite forestDoorSprite_{};
     Sprite arrowSprite_{};
@@ -152,7 +154,7 @@ private:
     void InitCamera();
 
     void AddSprite(const Vec3& pos, Sprite* sprite);
-    void AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider);
+    void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);
     void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
 
     void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
