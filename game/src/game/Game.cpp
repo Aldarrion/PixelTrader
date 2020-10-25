@@ -369,7 +369,7 @@ RESULT Game::InitWin32()
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
     AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
 
-    Box2D groundCollider = MakeBox2DMinMax(Vec2(left * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width) * TILE_SIZE, 9));
+    Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.5) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, 9));
     ground_.Colliders.Add(groundCollider);
     ground_.Tags.Add(ColliderTag::Ground);
 
