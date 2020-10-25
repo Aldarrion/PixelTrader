@@ -105,6 +105,7 @@ public:
     ~Game();
 
     RESULT InitWin32();
+    RESULT OnWindowResized();
     void Update(float dTime);
 
     float GetDTime() const;
@@ -147,6 +148,8 @@ private:
 
     // Debug
     bool visualizeColliders_{};
+
+    void InitCamera();
 
     void AddSprite(const Vec3& pos, Sprite* sprite);
     void AddObject(const Vec3& pos, Sprite* sprite, const Box2D* collider);

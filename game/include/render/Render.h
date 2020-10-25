@@ -107,7 +107,7 @@ class Render
     friend void DestroyRender();
 
 public:
-    RESULT ResizeWindow(uint width, uint height);
+    RESULT OnWindowResized(uint width, uint height);
     RESULT ReloadShaders();
     RESULT InitWin32(HWND hwnd, HINSTANCE hinst);
     RESULT InitImgui();

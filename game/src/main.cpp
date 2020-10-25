@@ -156,17 +156,28 @@ static void HsDestroyImgui()
 static void ToggleFullscreen()
 {
     uint wsInt = (static_cast<uint>(g_WindowState) + 1) % static_cast<uint>(WindowState::Count);
-    g_WindowState = static_cast<WindowState>(wsInt);
+    auto newState = static_cast<WindowState>(wsInt);
 
     int width = 1280;
     int height = 720;
-    if (g_WindowState == WindowState::BorderlessFs)
+    if (newState == WindowState::BorderlessFs)
     {
-        width = GetSystemMetrics(SM_CXSCREEN);
-        height = GetSystemMetrics(SM_CYSCREEN);
+        HMONITOR monitor = MonitorFromWindow(g_hwnd, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO monitorInfo{ sizeof(MONITORINFO) };
+        if (GetMonitorInfo(monitor, &monitorInfo) == 0)
+        {
+            LOG_ERR("GetMonitorInfoA failed");
+            return;
+        }
+
+        const RECT& rect = monitorInfo.rcMonitor;
+        width = rect.right - rect.left;
+        height = rect.bottom - rect.top;
+
+        hs_assert(width > 0 && height > 0);
     }
 
-    uint windowStyle = GetWindowStyle(g_WindowState);
+    uint windowStyle = GetWindowStyle(newState);
     SetWindowLongPtrA(g_hwnd, GWL_STYLE, windowStyle);
 
     RECT rc = { 0, 0, width, height};
@@ -175,7 +186,21 @@ static void ToggleFullscreen()
     SetWindowPos(g_hwnd, nullptr, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_FRAMECHANGED | SWP_NOMOVE);
     ShowWindow(g_hwnd, SW_SHOW);
 
-    hs::g_Render->ResizeWindow(width, height);
+    if (HS_FAILED(hs::g_Render->OnWindowResized(width, height)))
+    {
+        LOG_ERR("Failed to Render handle resize window");
+        // TODO(pavel): Do something more useful here, but this fail is pretty serious, Render needs to be able to recover too
+        hs_assert(false);
+        return;
+    }
+
+    if (HS_FAILED(hs::g_Game->OnWindowResized()))
+    {
+        LOG_ERR("Failed to Game handle resize window");
+        return;
+    }
+
+    g_WindowState = newState;
 }
 
 //------------------------------------------------------------------------------
@@ -300,12 +325,6 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE | PM_NOYIELD))
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-
-            if (g_hwnd && GetForegroundWindow() != g_hwnd)
-                continue;
-
             // TODO(pavel): This is ify, could this be a problem for messges such as WM_QUIT? Also add imgui activation.
             ImGui_ImplWin32_WndProcHandler(g_hwnd, msg.message, msg.wParam, msg.lParam);
             const auto& io = ImGui::GetIO();
@@ -357,8 +376,9 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
                 case WM_MBUTTONUP:
                     hs::g_Input->ButtonUp(hs::BTN_MIDDLE);
                     break;
-
                 default:
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
                     break;
             }
         }

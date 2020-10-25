@@ -240,11 +240,17 @@ static RESULT MakeSimpleSprite(const char* texPath, Sprite& t, Vec2 pivot)
 }
 
 //------------------------------------------------------------------------------
-RESULT Game::InitWin32()
+void Game::InitCamera()
 {
     constexpr uint PIXEL_PER_TEXEL = 5;
     // Divide by 2 to account for width going from -1 to 1 in NDC, then we rely on 1 texel being one unit when we draw meshes
     g_Render->GetCamera().SetHorizontalExtent(g_Render->GetWidth() / 2 / PIXEL_PER_TEXEL);
+}
+
+//------------------------------------------------------------------------------
+RESULT Game::InitWin32()
+{
+    InitCamera();
 
     Texture* groundTileTex;
     if (HS_FAILED(g_ResourceManager->LoadTexture2D("textures/Ground1.png", &groundTileTex)))
@@ -336,6 +342,13 @@ RESULT Game::InitWin32()
     ground_.Colliders.Add(groundCollider);
     ground_.Tags.Add(ColliderTag::Ground);
 
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
+RESULT Game::OnWindowResized()
+{
+    InitCamera();
     return R_OK;
 }
 

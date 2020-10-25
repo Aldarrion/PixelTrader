@@ -217,7 +217,7 @@ VkBool32 ValidationCallback(
 }
 
 //------------------------------------------------------------------------------
-RESULT Render::ResizeWindow(uint width, uint height)
+RESULT Render::OnWindowResized(uint width, uint height)
 {
     FlushGpu<false, true>();
 
@@ -757,7 +757,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice_, &queueCount, queueProps);
 
     uint directQueueBits = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
-    DBG_LOG("Enuerating device queue families, %d found", queueCount);
+    LOG_DBG("Enuerating device queue families, %d found", queueCount);
 
     for (uint i = 0; i < queueCount; ++i)
     {
