@@ -32,10 +32,14 @@ enum class WindowState
     Count,
 };
 static WindowState g_WindowState = WindowState::Windowed;
+static uint g_WindowWidth = 1280;
+static uint g_WindowHeight = 720;
+static bool g_DisableSizeChange = false;
 
 //------------------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    //LOG_DBG("Send: %x", msg);
     switch (msg)
     {
         case WM_NCACTIVATE:
@@ -55,6 +59,15 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
+        case WM_WINDOWPOSCHANGING:
+        {
+            if (g_DisableSizeChange)
+                ((WINDOWPOS*)lParam)->flags |= SWP_NOSIZE;
+            else
+                return DefWindowProc(hWnd, msg, wParam, lParam);
+            break;
+        }
+        case WM_SYSCOMMAND:
         default:
             return DefWindowProc(hWnd, msg, wParam, lParam);
     }
@@ -62,6 +75,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     return 0;
 }
 
+//------------------------------------------------------------------------------
 static uint GetWindowStyle(WindowState state)
 {
     uint windowStyle;
@@ -155,11 +169,12 @@ static void HsDestroyImgui()
 //------------------------------------------------------------------------------
 static void ToggleFullscreen()
 {
+    g_DisableSizeChange = false;
     uint wsInt = (static_cast<uint>(g_WindowState) + 1) % static_cast<uint>(WindowState::Count);
     auto newState = static_cast<WindowState>(wsInt);
 
-    int width = 1280;
-    int height = 720;
+    int width = g_WindowWidth;
+    int height = g_WindowHeight;
     if (newState == WindowState::BorderlessFs)
     {
         HMONITOR monitor = MonitorFromWindow(g_hwnd, MONITOR_DEFAULTTOPRIMARY);
@@ -201,6 +216,7 @@ static void ToggleFullscreen()
     }
 
     g_WindowState = newState;
+    g_DisableSizeChange = true;
 }
 
 //------------------------------------------------------------------------------
@@ -218,8 +234,8 @@ void ParseCmdLine(const char* commandLine, uint& width, uint& height, WindowStat
         int matched = sscanf(windowStart, "=%u,%u%*c", &w, &h);
         if (matched == 2)
         {
-            width = w;
-            height = h;
+            g_WindowWidth = width = w;
+            g_WindowHeight = height = h;
             windowStyle = WindowState::Windowed;
         }
     }
@@ -238,8 +254,8 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 {
     hs::Log(hs::LogLevel::Info, "VkRenderer start\n");
 
-    uint width = 1280;
-    uint height = 720;
+    uint width = g_WindowWidth;
+    uint height = g_WindowHeight;
 
     ParseCmdLine(cmdLine, width, height, g_WindowState);
 
@@ -321,8 +337,10 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     auto start = std::chrono::high_resolution_clock::now();
 
     MSG msg{};
+    g_DisableSizeChange = true;
     while (!shouldQuit)
     {
+        //LOG_DBG("--- Frame");
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE | PM_NOYIELD))
         {
             // TODO(pavel): This is ify, could this be a problem for messges such as WM_QUIT? Also add imgui activation.
@@ -331,6 +349,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             if (io.WantCaptureMouse || io.WantCaptureKeyboard)
                 continue;
 
+            //LOG_DBG("Post: %x", msg.message);
             switch (msg.message)
             {
                 case WM_SYSCHAR:
@@ -375,6 +394,8 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
                     break;
                 case WM_MBUTTONUP:
                     hs::g_Input->ButtonUp(hs::BTN_MIDDLE);
+                    break;
+                case WM_NCMOUSELEAVE:
                     break;
                 default:
                     TranslateMessage(&msg);

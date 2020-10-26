@@ -1260,6 +1260,7 @@ void Render::FlushGpu()
 
     VKR_CHECK(vkQueueSubmit(vkDirectQueue_, 1, &submit, directQueueFences_[currentBBIdx_]));
 
+    bool needRecreateSwapchain = false;
     if (present)
     {
         VkPresentInfoKHR presentInfo{};
@@ -1270,14 +1271,19 @@ void Render::FlushGpu()
         presentInfo.waitSemaphoreCount  = 1;
         presentInfo.pWaitSemaphores     = &submitSemaphores_[currentBBIdx_];
 
-        VKR_CHECK(vkQueuePresentKHR(vkDirectQueue_, &presentInfo));
+        VkResult presentResult = vkQueuePresentKHR(vkDirectQueue_, &presentInfo);
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
+        {
+            needRecreateSwapchain = true;
+        }
 
-        VKR_CHECK(vkAcquireNextImageKHR(vkDevice_, vkSwapchain_, (uint64)-1, nullptr, nextImageFence_, &currentBBIdx_));
+        if (!needRecreateSwapchain)
+            VKR_CHECK(vkAcquireNextImageKHR(vkDevice_, vkSwapchain_, (uint64)-1, nullptr, nextImageFence_, &currentBBIdx_));
     }
 
     if (wait)
     {
-        if (present)
+        if (!needRecreateSwapchain && present)
         {
             WaitForFence(nextImageFence_);
         }
@@ -1300,6 +1306,9 @@ void Render::FlushGpu()
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
+
+    if (needRecreateSwapchain)
+        OnWindowResized(width_, height_);
 }
 
 //------------------------------------------------------------------------------
