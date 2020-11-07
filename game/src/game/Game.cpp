@@ -312,7 +312,8 @@ RESULT Game::InitWin32()
         rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
 
     AnimationState rockIdle{};
-    rockIdle.Init(rockIdleSegments);
+    if (HS_FAILED(rockIdle.Init(rockIdleSegments)))
+        return R_FAIL;
 
     // ------------------------
     // Create initial map state
@@ -321,7 +322,8 @@ RESULT Game::InitWin32()
         pumpkinIdleSegments.Add(AnimationSegment{ &pumpkinSprite_[i], 0.5f });
 
     AnimationState pumpkinIdle{};
-    pumpkinIdle.Init(pumpkinIdleSegments);
+    if (HS_FAILED(pumpkinIdle.Init(pumpkinIdleSegments)))
+        return R_FAIL;
     Box2D pumpkinCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(12, 10));
     AddObject(Vec3(3 * TILE_SIZE, 9, 1), pumpkinIdle, &pumpkinCollider);
     AddObject(Vec3(1 * TILE_SIZE, 1.5 * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
@@ -331,7 +333,8 @@ RESULT Game::InitWin32()
     chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
 
     AnimationState chestIdle{};
-    chestIdle.Init(chestIdleSegments);
+    if (HS_FAILED(chestIdle.Init(chestIdleSegments)))
+        return R_FAIL;
 
     Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
     AddObject(TilePos(0, 0.5f, 1), chestIdle, &chestCollider);

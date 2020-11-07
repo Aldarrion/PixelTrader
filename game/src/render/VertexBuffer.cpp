@@ -2,6 +2,7 @@
 
 #include "render/Render.h"
 #include "render/Allocator.h"
+#include "common/Logging.h"
 
 namespace hs
 {
@@ -99,7 +100,12 @@ VertexBufferEntry VertexBufferCache::BeginAlloc(uint size, uint align, void** da
         else
         {
             entries_.Insert(0, CacheEntry());
-            entries_.First().buffer_.Init();
+            if (HS_FAILED(entries_.First().buffer_.Init()))
+            {
+                LOG_ERR("Failed to create new buffer entry");
+                hs_assert(false);
+                return {};
+            }
         }
     }
 

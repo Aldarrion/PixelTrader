@@ -28,9 +28,6 @@ bool CheckResult(VkResult result, const char* file, int line, const char* fun);
 #define VKR_CHECK(x) VKR_SUCCEED(x)
 #define VKR_FAILED(x) !VKR_SUCCEED(x)
 
-#define HS_ALLOCA(Type, count) (Type*)_alloca(count * sizeof(Type))
-
-
 //------------------------------------------------------------------------------
 namespace hs
 {
@@ -310,7 +307,7 @@ private:
     static PipelineKey StateToPipelineKey(const RenderState& state);
 
     RESULT PrepareForDraw();
-    RESULT AfterDraw();
+    void AfterDraw();
 
     RESULT WaitForFence(VkFence fence);
 

@@ -5,7 +5,7 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
-enum RESULT : int
+enum [[nodiscard]] RESULT : int
 {
     R_FAIL = -1,
     R_OK = 0,

@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <type_traits>
+#include <initializer_list>
 
 namespace hs
 {
@@ -17,12 +18,24 @@ template<class T>
 class Array
 {
 public:
+    using Iter_t = T*;
+    using ConstIter_t = const Iter_t;
+
     //------------------------------------------------------------------------------
     Array()
         : capacity_(0)
         , count_(0)
         , items_(nullptr)
     {}
+
+    //------------------------------------------------------------------------------
+    Array(std::initializer_list<T> elements)
+    {
+        for (auto&& e : elements)
+        {
+            Add(std::forward<decltype(e)>(e));
+        }
+    }
 
     //------------------------------------------------------------------------------
     ~Array()
@@ -73,7 +86,7 @@ public:
         capacity_ = other.capacity_;
         count_ = other.count_;
         items_ = other.items_;
-        
+
         other.items_ = nullptr;
         other.capacity_ = 0;
         other.count_ = 0;
@@ -89,7 +102,7 @@ public:
         capacity_ = other.capacity_;
         count_ = other.count_;
         items_ = other.items_;
-        
+
         other.items_ = nullptr;
         other.capacity_ = 0;
         other.count_ = 0;
@@ -98,26 +111,26 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    uint64 Count() const
+    [[nodiscard]] uint64 Count() const
     {
         return count_;
     }
 
     //------------------------------------------------------------------------------
-    bool IsEmpty() const
+    [[nodiscard]] bool IsEmpty() const
     {
         return count_ == 0;
     }
 
     //------------------------------------------------------------------------------
-    const T& operator[](uint64 index) const
+    [[nodiscard]] const T& operator[](uint64 index) const
     {
         hs_assert(index < count_);
         return items_[index];
     }
 
     //------------------------------------------------------------------------------
-    T& operator[](uint64 index)
+    [[nodiscard]] T& operator[](uint64 index)
     {
         hs_assert(index < count_);
         return items_[index];
@@ -131,7 +144,7 @@ public:
         if (count_ == capacity_)
         {
             capacity_ = ArrMax(capacity_ << 1, MIN_CAPACITY);
-            
+
             T* newItems = (T*)malloc(sizeof(T) * capacity_);
 
             if (std::is_trivial_v<T>)
@@ -314,38 +327,78 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    const T& First() const
+    [[nodiscard]] const T& First() const
     {
         hs_assert(count_);
         return items_[0];
     }
 
     //------------------------------------------------------------------------------
-    T& First()
+    [[nodiscard]] T& First()
     {
         hs_assert(count_);
         return items_[0];
     }
 
     //------------------------------------------------------------------------------
-    const T& Last() const
+    [[nodiscard]] const T& Last() const
     {
         hs_assert(count_);
         return items_[count_ - 1];
     }
 
     //------------------------------------------------------------------------------
-    T& Last()
+    [[nodiscard]] T& Last()
     {
         hs_assert(count_);
         return items_[count_ - 1];
     }
 
     //------------------------------------------------------------------------------
-    T* Data() const
+    [[nodiscard]] T* Data() const
     {
         return items_;
     }
+
+    #pragma region Iterators
+    //------------------------------------------------------------------------------
+    // Iterators
+    //------------------------------------------------------------------------------
+    [[nodiscard]] ConstIter_t cbegin() const
+    {
+        return items_;
+    }
+
+    //------------------------------------------------------------------------------
+    [[nodiscard]] ConstIter_t begin() const
+    {
+        return cbegin();
+    }
+
+    //------------------------------------------------------------------------------
+    [[nodiscard]] Iter_t begin()
+    {
+        return items_;
+    }
+
+    //------------------------------------------------------------------------------
+    [[nodiscard]] ConstIter_t cend() const
+    {
+        return items_ + count_;
+    }
+
+    //------------------------------------------------------------------------------
+    [[nodiscard]] ConstIter_t end() const
+    {
+        return cend();
+    }
+
+    //------------------------------------------------------------------------------
+    [[nodiscard]] Iter_t end()
+    {
+        return items_ + count_;
+    }
+    #pragma endregion
 
 private:
     static constexpr uint64 MIN_CAPACITY = 8;

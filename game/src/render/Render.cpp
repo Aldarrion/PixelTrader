@@ -18,6 +18,7 @@
 
 #include "common/Logging.h"
 #include "common/hs_Assert.h"
+#include "common/Util.h"
 
 #include "vulkan/vulkan_win32.h"
 
@@ -731,7 +732,8 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     #endif
 
     //-----------------------
-    CreateSurface();
+    if (HS_FAILED(CreateSurface()))
+        return R_FAIL;
 
     //-----------------------
     // Find physical device
@@ -1285,9 +1287,9 @@ void Render::FlushGpu()
     {
         if (!needRecreateSwapchain && present)
         {
-            WaitForFence(nextImageFence_);
+            HS_CHECK(WaitForFence(nextImageFence_));
         }
-        WaitForFence(directQueueFences_[currentBBIdx_]);
+        HS_CHECK(WaitForFence(directQueueFences_[currentBBIdx_]));
 
         vkResetDescriptorPool(vkDevice_, dynamicUBODPool_[currentBBIdx_], 0);
 
@@ -1308,7 +1310,7 @@ void Render::FlushGpu()
     VKR_CHECK(vkBeginCommandBuffer(directCmdBuffers_[currentBBIdx_], &beginInfo));
 
     if (needRecreateSwapchain)
-        OnWindowResized(width_, height_);
+        HS_CHECK(OnWindowResized(width_, height_));
 }
 
 //------------------------------------------------------------------------------
@@ -1555,11 +1557,9 @@ RESULT Render::PrepareForDraw()
 }
 
 //------------------------------------------------------------------------------
-RESULT Render::AfterDraw()
+void Render::AfterDraw()
 {
     state_.Reset();
-
-    return R_OK;
 }
 
 //------------------------------------------------------------------------------

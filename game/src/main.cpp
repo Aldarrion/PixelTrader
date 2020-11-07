@@ -39,7 +39,7 @@ static bool g_DisableSizeChange = false;
 //------------------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    //LOG_DBG("Send: %x", msg);
+    LOG_DBG("Send: %x", msg);
     switch (msg)
     {
         case WM_NCACTIVATE:
@@ -133,7 +133,7 @@ static hs::RESULT InitWindow(int width, int height, HINSTANCE instance)
 
     auto hr = ShowWindow(g_hwnd, SW_SHOW);
 
-    if (FAILED(hr))
+    if (HS_FAILED(hr))
     {
         hs::Log(hs::LogLevel::Error, "Failed to show window, terminating");
         return hs::R_FAIL;
@@ -260,73 +260,73 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     ParseCmdLine(cmdLine, width, height, g_WindowState);
 
     // Window
-    if (FAILED(InitWindow(width, height, instance)))
+    if (HS_FAILED(InitWindow(width, height, instance)))
         return -1;
 
     // Resource manager
-    if (FAILED(hs::CreateResourceManager()))
+    if (HS_FAILED(hs::CreateResourceManager()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to create resource manager");
         return -1;
     }
     hs_assert(hs::g_ResourceManager);
 
-    if (FAILED(hs::g_ResourceManager->InitWin32()))
+    if (HS_FAILED(hs::g_ResourceManager->InitWin32()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init resource manager");
         return -1;
     }
 
     // Render
-    if (FAILED(hs::CreateRender(width, height)))
+    if (HS_FAILED(hs::CreateRender(width, height)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to create render");
         return -1;
     }
     hs_assert(hs::g_Render);
 
-    if (FAILED(hs::g_Render->InitWin32(g_hwnd, instance)))
+    if (HS_FAILED(hs::g_Render->InitWin32(g_hwnd, instance)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init render");
         return -1;
     }
 
     // Imgui
-    if (FAILED(HsInitImguiWin32()))
+    if (HS_FAILED(HsInitImguiWin32()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init Imgui for Win32");
         return -1;
     }
 
-    if (FAILED(hs::g_Render->InitImgui()))
+    if (HS_FAILED(hs::g_Render->InitImgui()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init render for Imgui");
         return -1;
     }
 
     // Input
-    if (FAILED(hs::CreateInput()))
+    if (HS_FAILED(hs::CreateInput()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to crete input");
         return -1;
     }
     hs_assert(hs::g_Input);
 
-    if (FAILED(hs::g_Input->InitWin32(g_hwnd)))
+    if (HS_FAILED(hs::g_Input->InitWin32(g_hwnd)))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init input");
         return -1;
     }
 
     // Game
-    if (FAILED(hs::CreateGame()))
+    if (HS_FAILED(hs::CreateGame()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to crete game");
         return -1;
     }
     hs_assert(hs::g_Game);
 
-    if (FAILED(hs::g_Game->InitWin32()))
+    if (HS_FAILED(hs::g_Game->InitWin32()))
     {
         hs::Log(hs::LogLevel::Error, "Failed to init game");
         return -1;
@@ -340,7 +340,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     g_DisableSizeChange = true;
     while (!shouldQuit)
     {
-        //LOG_DBG("--- Frame");
+        LOG_DBG("--- Frame");
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE | PM_NOYIELD))
         {
             // TODO(pavel): This is ify, could this be a problem for messges such as WM_QUIT? Also add imgui activation.
@@ -349,12 +349,14 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             if (io.WantCaptureMouse || io.WantCaptureKeyboard)
                 continue;
 
-            //LOG_DBG("Post: %x", msg.message);
+            LOG_DBG("Post: %x", msg.message);
             switch (msg.message)
             {
                 case WM_SYSCHAR:
                     if (msg.wParam == VK_RETURN && (HIWORD(msg.lParam) & KF_ALTDOWN))
                         ToggleFullscreen();
+                    else if (msg.wParam == VK_F4 && (HIWORD(msg.lParam) & KF_ALTDOWN))
+                        shouldQuit = true;
                     break;
                 case WM_QUIT:
                     shouldQuit = true;
@@ -365,15 +367,13 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
                     if (msg.lParam & (1 << 30))
                         break;
 
-                    if (msg.wParam == VK_ESCAPE)
-                        shouldQuit = true;
                     hs::g_Input->KeyDown(msg.wParam);
                     break;
                 }
                 case WM_KEYUP:
                 {
                     if (msg.wParam == VK_F5)
-                        hs::g_Render->ReloadShaders();
+                        (void)hs::g_Render->ReloadShaders();
                     hs::g_Input->KeyUp(msg.wParam);
                     break;
                 }

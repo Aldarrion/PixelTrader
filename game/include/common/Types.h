@@ -1,6 +1,8 @@
 #pragma once
 #include "Config.h"
 
+#include "common/hs_Assert.h"
+
 #include <cstdint>
 
 using uint8     = uint8_t;
@@ -34,4 +36,9 @@ constexpr uint ArrSizeInternal(T(&)[N])
 
 #define HS_FAILED(res) (((int)(res)) < 0)
 #define HS_SUCCEEDED(res) (((int)(res)) >= 0)
+#if HS_DEBUG
+    #define HS_CHECK(res) hs_assert(HS_SUCCEEDED(res))
+#else
+    #define HS_CHECK(res) (void)res
+#endif
 

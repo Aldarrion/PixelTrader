@@ -3,6 +3,7 @@
 #include "render/Allocator.h"
 #include "render/Render.h"
 #include "math/hs_Math.h"
+#include "common/Logging.h"
 
 namespace hs
 {
@@ -105,7 +106,12 @@ DynamicUBOEntry DynamicUBOCache::BeginAlloc(uint size, void** data)
         else
         {
             entries_.Insert(0, CacheEntry());
-            entries_.First().buffer_.Init();
+            if (HS_FAILED(entries_.First().buffer_.Init()))
+            {
+                LOG_ERR("Failed to create new buffer entry");
+                hs_assert(false);
+                return {};
+            }
         }
     }
 
