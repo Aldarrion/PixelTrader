@@ -3,6 +3,8 @@
 #include "game/Camera.h"
 #include "game/SpriteRenderer.h"
 
+#include "ecs/Ecs.h"
+
 #include "containers/Array.h"
 
 #include "common/Enums.h"
@@ -30,74 +32,7 @@ struct AnimationSegment
 };
 
 //------------------------------------------------------------------------------
-struct AnimationState
-{
-    RESULT Init(const Array<AnimationSegment>& segments);
-    void Update(float dTime);
-    Sprite* GetCurrentSprite() const;
-
-    Array<AnimationSegment> segments_;
-    uint currentSegment_{};
-    float timeToSwap_;
-};
-
-//------------------------------------------------------------------------------
-struct SpriteArchetype
-{
-    Array<Vec3>     Positions;
-    Array<Sprite*>  Sprites;
-};
-
-//------------------------------------------------------------------------------
-struct ObjectArchetype
-{
-    Array<Vec3>             Positions;
-    Array<Sprite*>          Sprites;
-    Array<AnimationState>   Animations;
-    Array<Box2D>            Colliders;
-};
-
-//------------------------------------------------------------------------------
-struct CharacterArchetype
-{
-    Array<Vec3>             Positions;
-    Array<Vec2>             Velocities;
-    Array<Sprite*>          Sprites;
-    Array<AnimationState>   Animations;
-    Array<Box2D>            Colliders;
-};
-
-//------------------------------------------------------------------------------
-struct ProjectileArchetype
-{
-    Array<Vec3>     Positions;
-    Array<float>    Rotations;
-    Array<Sprite*>  Sprites;
-    Array<Vec2>     Velocities;
-    Array<Circle>   TipColliders;
-};
-
-//------------------------------------------------------------------------------
-struct TargetArchetype
-{
-    Array<Vec3>     Positions;
-    Array<Circle>   Colliders;
-    Array<Sprite*>  Sprites;
-};
-
-//------------------------------------------------------------------------------
-enum class ColliderTag
-{
-    None,
-    Ground
-};
-
-//------------------------------------------------------------------------------
-struct GroundArchetype
-{
-    Array<Box2D>        Colliders;
-    Array<ColliderTag>  Tags;
-};
+struct AnimationState;
 
 //------------------------------------------------------------------------------
 class Game
@@ -127,6 +62,8 @@ private:
         BOT_RIGHT,
     };
 
+    UniquePtr<EcsWorld> world_;
+
     bool isWindowActive_{};
 
     float dTime_{};
@@ -140,22 +77,17 @@ private:
     Sprite arrowSprite_{};
     Sprite targetSprite_{};
 
-    // Archetypes
-    SpriteArchetype     sprites_{};
-    CharacterArchetype  characters_{};
-    GroundArchetype     ground_{};
-    ObjectArchetype     objects_{};
-    ProjectileArchetype projectiles_{};
-    TargetArchetype     targets_{};
+    Entity_t character_{};
 
     // Debug
     bool visualizeColliders_{};
 
+    void InitEcs();
     void InitCamera();
 
     void AddSprite(const Vec3& pos, Sprite* sprite);
     void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);
-    void AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
+    Entity_t AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
 
     void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
     void RemoveProjectile(uint idx);

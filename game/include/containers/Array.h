@@ -22,11 +22,13 @@ public:
     using ConstIter_t = const Iter_t;
 
     //------------------------------------------------------------------------------
-    Array()
-        : capacity_(0)
-        , count_(0)
-        , items_(nullptr)
-    {}
+    static constexpr uint64 IndexBad()
+    {
+        return (uint64)-1;
+    }
+
+    //------------------------------------------------------------------------------
+    Array() = default;
 
     //------------------------------------------------------------------------------
     Array(std::initializer_list<T> elements)
@@ -360,6 +362,18 @@ public:
         return items_;
     }
 
+    //------------------------------------------------------------------------------
+    uint64 IndexOf(const T& item) const
+    {
+        for (int i = 0; i < count_; ++i)
+        {
+            if (items_[i] == item)
+                return i;
+        }
+
+        return IndexBad();
+    }
+
     #pragma region Iterators
     //------------------------------------------------------------------------------
     // Iterators
@@ -403,9 +417,9 @@ public:
 private:
     static constexpr uint64 MIN_CAPACITY = 8;
 
-    uint64 capacity_;
-    uint64 count_;
-    T* items_;
+    uint64 capacity_{};
+    uint64 count_{};
+    T* items_{};
 
     //------------------------------------------------------------------------------
     uint64 ArrMax(uint64 a, uint64 b)

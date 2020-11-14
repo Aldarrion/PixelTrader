@@ -39,7 +39,7 @@ static bool g_DisableSizeChange = false;
 //------------------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    LOG_DBG("Send: %x", msg);
+    //LOG_DBG("Send: %x", msg);
     switch (msg)
     {
         case WM_NCACTIVATE:
@@ -340,7 +340,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     g_DisableSizeChange = true;
     while (!shouldQuit)
     {
-        LOG_DBG("--- Frame");
+        //LOG_DBG("--- Frame");
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE | PM_NOYIELD))
         {
             // TODO(pavel): This is ify, could this be a problem for messges such as WM_QUIT? Also add imgui activation.
@@ -349,7 +349,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             if (io.WantCaptureMouse || io.WantCaptureKeyboard)
                 continue;
 
-            LOG_DBG("Post: %x", msg.message);
+            //LOG_DBG("Post: %x", msg.message);
             switch (msg.message)
             {
                 case WM_SYSCHAR:

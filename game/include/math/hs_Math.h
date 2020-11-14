@@ -572,20 +572,20 @@ struct Mat44
     //------------------------------------------------------------------------------
     Mat44 GetInverse() const
     {
-        const Vec3 a(XYZ(a));
-        const Vec3 b(XYZ(b));
-        const Vec3 c(XYZ(c));
-        const Vec3 d(XYZ(pos));
+        const Vec3 a3(XYZ(a));
+        const Vec3 b3(XYZ(b));
+        const Vec3 c3(XYZ(c));
+        const Vec3 d3(XYZ(pos));
 
         const float x = (*this)(0, 3);
         const float y = (*this)(1, 3);
         const float z = (*this)(2, 3);
         const float w = (*this)(3, 3);
 
-        Vec3 s = a.Cross(b);
-        Vec3 t = c.Cross(d);
-        Vec3 u = a * y - b * x;
-        Vec3 v = c * w - d * z;
+        Vec3 s = a3.Cross(b3);
+        Vec3 t = c3.Cross(d3);
+        Vec3 u = a3 * y - b3 * x;
+        Vec3 v = c3 * w - d3 * z;
 
         const float det = s.Dot(v) + t.Dot(u);
         hs_assert(det && "Matrix must be regular");
@@ -596,16 +596,16 @@ struct Mat44
         u *= invDet;
         v *= invDet;
 
-        const Vec3 r0 = b.Cross(v) + t * y;
-        const Vec3 r1 = v.Cross(a) - t * x;
-        const Vec3 r2 = d.Cross(u) + s * w;
-        const Vec3 r3 = u.Cross(c) - s * z;
+        const Vec3 r0 = b3.Cross(v) + t * y;
+        const Vec3 r1 = v.Cross(a3) - t * x;
+        const Vec3 r2 = d3.Cross(u) + s * w;
+        const Vec3 r3 = u.Cross(c3) - s * z;
 
         const Mat44 inverse(
             r0.x, r1.x, r2.x, r3.x,
             r0.y, r1.y, r2.y, r3.y,
             r0.z, r1.z, r2.z, r3.z,
-            -b.Dot(t), a.Dot(t), -d.Dot(s), c.Dot(s)
+            -b3.Dot(t), a3.Dot(t), -d3.Dot(s), c3.Dot(s)
         );
 
         return inverse;
@@ -614,31 +614,31 @@ struct Mat44
     //------------------------------------------------------------------------------
     Mat44 GetInverseTransform() const
     {
-        const Vec3 a(XYZ(a));
-        const Vec3 b(XYZ(b));
-        const Vec3 c(XYZ(c));
-        const Vec3 d(XYZ(pos));
+        const Vec3 a3(XYZ(a));
+        const Vec3 b3(XYZ(b));
+        const Vec3 c3(XYZ(c));
+        const Vec3 d3(XYZ(pos));
 
-        Vec3 s = a.Cross(b);
-        Vec3 t = c.Cross(d);
+        Vec3 s = a3.Cross(b3);
+        Vec3 t = c3.Cross(d3);
 
-        const float det = s.Dot(c);
+        const float det = s.Dot(c3);
         hs_assert(det && "Matrix must be regular");
 
         const float invDet = 1.0f / det;
 
         s *= invDet;
         t *= invDet;
-        const Vec3 v = c * invDet;
+        const Vec3 v = c3 * invDet;
 
-        const Vec3 r0 = b.Cross(v);
-        const Vec3 r1 = v.Cross(a);
+        const Vec3 r0 = b3.Cross(v);
+        const Vec3 r1 = v.Cross(a3);
 
         const Mat44 inverse(
             r0.x, r1.x, s.x,                0,
             r0.y, r1.y, s.y,                0,
             r0.z, r1.z, s.z,                0,
-            -b.Dot(t), a.Dot(t), -d.Dot(s), 1
+            -b3.Dot(t), a3.Dot(t), -d3.Dot(s), 1
         );
 
         return inverse;
@@ -764,7 +764,7 @@ inline Mat44 MakeLookAt(const Vec3& pos, const Vec3& target)
     // Matrix transforms from world space to camera space. Therefore, we return
     // the inverse of the camera matrix - negate the translation and multiply by
     // transposition of the 3x3 rotation matrix.
-    // We first need to translate the vector to -pos and then rotate it, which 
+    // We first need to translate the vector to -pos and then rotate it, which
     // would be done by two matrices, here we have the result of multiplication of
     // those two matrices
     return Mat44(
@@ -877,6 +877,7 @@ struct Circle
     Vec2    center_;
     float   radius_;
 
+    Circle() = default;
     Circle(Vec2 center, float radius)
         : center_(center)
         , radius_(radius)
@@ -895,7 +896,7 @@ struct Circle
 //------------------------------------------------------------------------------
 constexpr inline bool IsIntersecting(const Box2D& a, const Box2D& b)
 {
-    if (a.max_.x < b.min_.x || a.min_.x > b.max_.x) 
+    if (a.max_.x < b.min_.x || a.min_.x > b.max_.x)
         return false;
     if (a.max_.y < b.min_.y || a.min_.y > b.max_.y)
         return false;

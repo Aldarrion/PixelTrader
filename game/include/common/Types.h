@@ -31,7 +31,7 @@ constexpr uint ArrSizeInternal(T(&)[N])
 
 }
 
-#define hs_arr_len(arr) internal::ArrSizeInternal(arr)
+#define hs_arr_len(arr) ::internal::ArrSizeInternal(arr)
 //#define VKR_ARR_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 
 #define HS_FAILED(res) (((int)(res)) < 0)

@@ -22,6 +22,96 @@ namespace hs
 {
 
 //------------------------------------------------------------------------------
+// Components
+//------------------------------------------------------------------------------
+struct Position : Vec3
+{
+};
+
+//------------------------------------------------------------------------------
+struct Velocity : Vec2
+{
+};
+
+//------------------------------------------------------------------------------
+struct Rotation
+{
+    float angle_;
+};
+
+//------------------------------------------------------------------------------
+struct SpriteComponent
+{
+    Sprite* sprite_;
+};
+
+//------------------------------------------------------------------------------
+struct ColliderComponent
+{
+    Box2D collider_;
+};
+
+//------------------------------------------------------------------------------
+struct TipCollider
+{
+    Circle collider_;
+};
+
+//------------------------------------------------------------------------------
+struct TargetCollider
+{
+    Circle collider_;
+};
+
+//------------------------------------------------------------------------------
+struct AnimationState
+{
+    RESULT Init(const Array<AnimationSegment>& segments);
+    void Update(float dTime);
+    Sprite* GetCurrentSprite() const;
+
+    Array<AnimationSegment> segments_;
+    uint currentSegment_{};
+    float timeToSwap_;
+};
+
+//------------------------------------------------------------------------------
+enum class ColliderTag
+{
+    None,
+    Ground
+};
+
+//------------------------------------------------------------------------------
+struct CharacterTag
+{
+};
+
+//------------------------------------------------------------------------------
+void Game::InitEcs()
+{
+    #define INIT_COMPONENT(type) TypeInfo<type>::InitTypeId()
+
+    INIT_COMPONENT(Entity_t);
+    INIT_COMPONENT(Position);
+    INIT_COMPONENT(Velocity);
+    INIT_COMPONENT(Rotation);
+    INIT_COMPONENT(SpriteComponent);
+    INIT_COMPONENT(ColliderComponent);
+    INIT_COMPONENT(TipCollider);
+    INIT_COMPONENT(TargetCollider);
+    INIT_COMPONENT(AnimationState);
+    INIT_COMPONENT(ColliderTag);
+    INIT_COMPONENT(CharacterTag);
+
+    #undef INIT_COMPONENT
+
+    world_ = MakeUnique<EcsWorld>();
+}
+
+//------------------------------------------------------------------------------
+// Game
+//------------------------------------------------------------------------------
 Game* g_Game{};
 
 //------------------------------------------------------------------------------
@@ -80,83 +170,84 @@ Game::~Game() = default;
 //------------------------------------------------------------------------------
 void Game::AddSprite(const Vec3& pos, Sprite* sprite)
 {
-    sprites_.Positions.Add(pos);
-    sprites_.Sprites.Add(sprite);
+     world_->CreateEntity(Position{ pos }, SpriteComponent{ sprite });
 }
 
 //------------------------------------------------------------------------------
 void Game::AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider)
 {
-    objects_.Positions.Add(pos);
-    objects_.Animations.Add(animation);
     auto sprite = animation.GetCurrentSprite();
-    objects_.Sprites.Add(sprite);
+
+    Box2D col;
     if (!collider)
-        objects_.Colliders.Add(MakeBox2DPosSize(Vec2::ZERO(), sprite->size_));
+        col = MakeBox2DPosSize(Vec2::ZERO(), sprite->size_);
     else
-        objects_.Colliders.Add(*collider);
+        col = *collider;
+
+    world_->CreateEntity(Position{ pos }, animation, SpriteComponent{ sprite }, ColliderComponent{ col });
 }
 
 //------------------------------------------------------------------------------
-void Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider)
+Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider)
 {
-    characters_.Positions.Add(pos);
-    characters_.Velocities.Add(Vec2::ZERO());
-    characters_.Animations.Add(animation);
-    characters_.Sprites.Add(animation.GetCurrentSprite());
-    characters_.Colliders.Add(collider);
+    auto eid = world_->CreateEntity(
+        Position{ pos },
+        Velocity{ Vec2::ZERO() },
+        animation,
+        ColliderComponent{ collider },
+        SpriteComponent{ animation.GetCurrentSprite() },
+        CharacterTag{}
+    );
+    return eid;
 }
 
 //------------------------------------------------------------------------------
 void Game::AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity)
 {
-    projectiles_.Positions.Add(pos);
-    projectiles_.Rotations.Add(rotation);
-    projectiles_.Sprites.Add(sprite);
-    projectiles_.TipColliders.Add(collider);
-    projectiles_.Velocities.Add(velocity);
+    world_->CreateEntity(
+        Position{ pos },
+        Rotation{ rotation },
+        SpriteComponent{ sprite },
+        TipCollider{ collider },
+        Velocity{ velocity }
+    );
 }
 
 //------------------------------------------------------------------------------
-void Game::RemoveProjectile(uint idx)
+void Game::RemoveProjectile(Entity_t eid)
 {
-    projectiles_.Positions.Remove(idx);
-    projectiles_.Rotations.Remove(idx);
-    projectiles_.Sprites.Remove(idx);
-    projectiles_.TipColliders.Remove(idx);
-    projectiles_.Velocities.Remove(idx);
+    // TODO
+    //world_->DeleteEntity(eid);
 }
 
 //------------------------------------------------------------------------------
 void Game::AddTarget(const Vec3& pos, Sprite* sprite,  const Circle& collider)
 {
-    targets_.Positions.Add(pos);
-    targets_.Colliders.Add(collider);
-    targets_.Sprites.Add(sprite);
+    world_->CreateEntity(
+        Position{ pos },
+        SpriteComponent{ sprite },
+        TargetCollider{ collider }
+    );
 }
 
 //------------------------------------------------------------------------------
-void Game::RemoveTarget(uint idx)
+void Game::RemoveTarget(Entity_t eid)
 {
-    targets_.Positions.Remove(idx);
-    targets_.Colliders.Remove(idx);
-    targets_.Sprites.Remove(idx);
+    // TODO
+    //world_->DeleteEntity(eid);
 }
 
 //------------------------------------------------------------------------------
 void Game::AnimateSprites()
 {
-    for (int i = 0; i < characters_.Animations.Count(); ++i)
-    {
-        characters_.Animations[i].Update(dTime_);
-        characters_.Sprites[i] = characters_.Animations[i].GetCurrentSprite();
-    }
-
-    for (int i = 0; i < objects_.Animations.Count(); ++i)
-    {
-        objects_.Animations[i].Update(dTime_);
-        objects_.Sprites[i] = objects_.Animations[i].GetCurrentSprite();
-    }
+    EcsWorld::Iter<AnimationState, SpriteComponent>(world_.Get()).Each(
+        [dTime = dTime_]
+        (AnimationState& anim, SpriteComponent& sprite)
+        {
+            anim.Update(dTime);
+            sprite.sprite_ = anim.GetCurrentSprite();
+        }
+    );
 }
 
 //------------------------------------------------------------------------------
@@ -200,30 +291,37 @@ void Game::DrawColliders()
     if (!visualizeColliders_)
         return;
 
-    for (int i = 0; i < characters_.Colliders.Count(); ++i)
-    {
-        DrawCollider(characters_.Colliders[i].Offset(characters_.Positions[i].XY()));
-    }
+    EcsWorld::Iter<const Position, const ColliderComponent>(world_.Get()).Each(
+        []
+        (const Position& pos, const ColliderComponent& collider)
+        {
+            DrawCollider(collider.collider_.Offset(pos.XY()));
+        }
+    );
 
-    for (int i = 0; i < ground_.Colliders.Count(); ++i)
-    {
-        DrawCollider(ground_.Colliders[i]);
-    }
+    EcsWorld::Iter<const ColliderComponent>(world_.Get()).Each(
+        []
+        (const ColliderComponent& collider)
+        {
+            DrawCollider(collider.collider_);
+        }
+    );
 
-    for (int i = 0; i < objects_.Colliders.Count(); ++i)
-    {
-        DrawCollider(objects_.Colliders[i].Offset(objects_.Positions[i].XY()));
-    }
+    EcsWorld::Iter<const Position, const Rotation, const TipCollider, const SpriteComponent>(world_.Get()).Each(
+        []
+        (const Position& pos, const Rotation rotation, const TipCollider& collider, const SpriteComponent sprite)
+        {
+            DrawCollider(collider.collider_, MakeTransform(pos, rotation.angle_, sprite.sprite_->pivot_));
+        }
+    );
 
-    for (int i = 0; i < projectiles_.TipColliders.Count(); ++i)
-    {
-        DrawCollider(projectiles_.TipColliders[i], MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_));
-    }
-
-    for (int i = 0; i < targets_.Colliders.Count(); ++i)
-    {
-        DrawCollider(targets_.Colliders[i].Offset(targets_.Positions[i].XY()), Mat44::Identity());
-    }
+    EcsWorld::Iter<const Position, const TargetCollider>(world_.Get()).Each(
+        []
+        (const Position& pos, const TargetCollider& collider)
+        {
+            DrawCollider(collider.collider_.Offset(pos.XY()), Mat44::Identity());
+        }
+    );
 }
 
 //------------------------------------------------------------------------------
@@ -258,6 +356,7 @@ void Game::InitCamera()
 //------------------------------------------------------------------------------
 RESULT Game::InitWin32()
 {
+    InitEcs();
     InitCamera();
 
     Texture* groundTileTex;
@@ -352,7 +451,7 @@ RESULT Game::InitWin32()
     for (int i = 0; i < width; ++i)
         AddSprite(TilePos(left + 1 + i, y), &groundSprite_[TOP]);
     AddSprite(TilePos(left + width + 1, y), &groundSprite_[TOP_RIGHT]);
-    
+
     int j = 0;
     for (; j < height; j++)
     {
@@ -370,11 +469,10 @@ RESULT Game::InitWin32()
     AddSprite(TilePos(left + width + 1, y), &groundSprite_[BOT_RIGHT]);
 
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
-    AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
+    character_ = AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
 
     Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.5) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, 9));
-    ground_.Colliders.Add(groundCollider);
-    ground_.Tags.Add(ColliderTag::Ground);
+    world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
 
     return R_OK;
 }
@@ -401,7 +499,7 @@ float projectileGravity = gravity / 10;
 float projectileSpeed = 150.0f;
 
 //------------------------------------------------------------------------------
-constexpr float TARGET_COOLDOWN = 3.0f;
+//constexpr float TARGET_COOLDOWN = 3.0f;
 float targetTimeToSpawn{};
 
 //------------------------------------------------------------------------------
@@ -488,7 +586,7 @@ void Game::Update(float dTime)
             focusMultiplier = 0.25f;
         }
 
-        Vec2& velocity = characters_.Velocities[0];
+        Vec2& velocity = world_->GetComponent<Velocity>(character_);
         velocity.y += gravity * GetDTime() * focusMultiplier;
         velocity.x = 0;
 
@@ -507,15 +605,15 @@ void Game::Update(float dTime)
             velocity.x -= characterSpeed;
         }
 
-        Vec3& pos = characters_.Positions[0];
+        Vec3& pos = world_->GetComponent<Position>(character_);
 
         isGrounded = false;
 
         Vec2 dtVel = velocity * GetDTime() * focusMultiplier;
 
         Vec2 pos2 = pos.XY();
-        const Box2D& originalCollider = characters_.Colliders[0];
-        Box2D playerCollider = characters_.Colliders[0].Offset(pos.XY());
+        const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(character_);
+        Box2D playerCollider = originalCollider.collider_.Offset(pos.XY());
 
         auto SolveIntersection = [pos2, &dtVel, &originalCollider, &playerCollider](const Box2D& groundCollider)
         {
@@ -523,7 +621,7 @@ void Game::Update(float dTime)
             if (intersection.isIntersecting_)
             {
                 Vec2 tmpPos = pos2 + dtVel * intersection.tFirst_;
-                Box2D tmpCollider = originalCollider.Offset(tmpPos);
+                Box2D tmpCollider = originalCollider.collider_.Offset(tmpPos);
                 Vec2 closeNormal = ClosestNormal(groundCollider, tmpCollider);
 
                 float d = closeNormal.Dot(dtVel);
@@ -543,16 +641,13 @@ void Game::Update(float dTime)
             }
         };
 
-        for (int i = 0; i < ground_.Colliders.Count(); ++i)
-        {
-            SolveIntersection(ground_.Colliders[i]);
-        }
-
-        for (int i = 0; i < objects_.Colliders.Count(); ++i)
-        {
-            SolveIntersection(objects_.Colliders[i].Offset(objects_.Positions[i].XY()));
-        }
-
+        EcsWorld::Iter<const ColliderComponent, const Position>(world_.Get()).EachExcept<CharacterTag>(
+            [SolveIntersection]
+            (const ColliderComponent& collider, const Position& pos)
+            {
+                SolveIntersection(collider.collider_.Offset(pos.XY()));
+            }
+        );
 
         if (isGrounded)
         {
@@ -563,7 +658,7 @@ void Game::Update(float dTime)
         pos.y += dtVel.y;
 
         Camera& cam = g_Render->GetCamera();
-        cam.SetPosition(Vec2{ pos.x, pos.y } + (characters_.Sprites[0]->size_ / 2.0f)); // Center the camera pos at the center of the player
+        cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
         cam.UpdateMatrics();
 
         static Vec2 maxPlayerVelocity(Vec2::ZERO());
@@ -590,14 +685,14 @@ void Game::Update(float dTime)
             timeToShoot = SHOOT_COOLDOWN;
 
             Vec2 to = CursorToWorld();
-            Vec2 projPos = characters_.Positions[0].XY() + characters_.Sprites[0]->size_ / 2;
+            Vec2 projPos = world_->GetComponent<Position>(character_).XY() + world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2;
             Vec2 dir(to - projPos);
             dir.Normalize();
 
             float angle = RotationFromDirection(dir);
 
             constexpr float PLAYER_VELOCITY_WEIGHT = 0.7f;
-            Vec2 projectileVelocity = dir * projectileSpeed + characters_.Velocities[0] * PLAYER_VELOCITY_WEIGHT * focusMultiplier;
+            Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(character_) * PLAYER_VELOCITY_WEIGHT * focusMultiplier;
             AddProjectile(
                 Vec3(projPos.x, projPos.y, 0.5f),
                 angle,
@@ -609,51 +704,55 @@ void Game::Update(float dTime)
 
         // Move projectiles
         {
-            for (int i = 0; i < projectiles_.Positions.Count();)
-            {
-                projectiles_.Velocities[i].y += projectileGravity * GetDTime();
-                projectiles_.Positions[i].AddXY(projectiles_.Velocities[i] * GetDTime());
+            EcsWorld::Iter<Position, Velocity, Rotation>(world_.Get()).Each(
+                [this](Position& position, Velocity& velocity, Rotation& rotation)
+                {
+                    velocity.y += projectileGravity * GetDTime();
+                    position.AddXY(velocity * GetDTime());
 
-                projectiles_.Rotations[i] = RotationFromDirection(projectiles_.Velocities[i].Normalized());
+                    rotation.angle_ = RotationFromDirection(velocity.Normalized());
 
-                ImGui::Text("Projectile velocity: [%.2f, %.2f]", projectiles_.Velocities[i].x, projectiles_.Velocities[i].y);
+                    ImGui::Text("Projectile velocity: [%.2f, %.2f]", velocity.x, velocity.y);
 
-                if (projectiles_.Positions[i].y < -1000)
-                    RemoveProjectile(i);
-                else
-                    ++i;
-            }
+                    // TODO
+                    //if (position.y < -1000)
+                    //    RemoveProjectile(i);
+                }
+            );
         }
 
         // Collide projectiles
         {
-            for (int i = 0; i < projectiles_.Positions.Count(); ++i)
-            {
-                Mat44 projectileTransform = MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_);
-                Vec2 projPos = projectileTransform.TransformPos(projectiles_.TipColliders[i].center_);
-
-                for (int j = 0; j < targets_.Positions.Count(); ++j)
+            EcsWorld::Iter<Position, Velocity, Rotation>(world_.Get()).Each(
+                [](Position&, Velocity&, Rotation&)
                 {
-                    Vec2 tgtPos = targets_.Positions[j].XY() + targets_.Colliders[j].center_;
-                    if (IsIntersecting(Circle(projPos, projectiles_.TipColliders[i].radius_), Circle(tgtPos, targets_.Colliders[j].radius_)))
-                    {
-                        RemoveProjectile(i);
-                        RemoveTarget(j);
-                        targetTimeToSpawn = TARGET_COOLDOWN;
-                        break;
-                    }
+                    // TODO
+                    //Mat44 projectileTransform = MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_);
+                    //Vec2 projPos = projectileTransform.TransformPos(projectiles_.TipColliders[i].center_);
+                    //
+                    //for (int j = 0; j < targets_.Positions.Count(); ++j)
+                    //{
+                    //    Vec2 tgtPos = targets_.Positions[j].XY() + targets_.Colliders[j].center_;
+                    //    if (IsIntersecting(Circle(projPos, projectiles_.TipColliders[i].radius_), Circle(tgtPos, targets_.Colliders[j].radius_)))
+                    //    {
+                    //        //RemoveProjectile(i); // TODO
+                    //        //RemoveTarget(j); // TODO
+                    //        targetTimeToSpawn = TARGET_COOLDOWN;
+                    //        break;
+                    //    }
+                    //}
                 }
-            }
+            );
         }
     }
 
     // Spawn target
     {
-        targetTimeToSpawn -= GetDTime();
-        if (targets_.Positions.IsEmpty() && targetTimeToSpawn <= 0)
-        {
-            AddTarget(TilePos(5, 5, 2.5f), &targetSprite_, Circle(targetSprite_.size_ / 2.0f, 8));
-        }
+        //targetTimeToSpawn -= GetDTime();
+        //if (targets_.Positions.IsEmpty() && targetTimeToSpawn <= 0)
+        //{
+        //    AddTarget(TilePos(5, 5, 2.5f), &targetSprite_, Circle(targetSprite_.size_ / 2.0f, 8));
+        //}
     }
 
     AnimateSprites();
@@ -664,42 +763,29 @@ void Game::Update(float dTime)
     sr->ClearSprites();
 
     // Regular tiles
-    for (int i = 0; i < sprites_.Positions.Count(); ++i)
-    {
-        sr->AddSprite(sprites_.Sprites[i], Mat44::Translation(sprites_.Positions[i]));
-    }
-
-    for (int i = 0; i < objects_.Positions.Count(); ++i)
-    {
-        sr->AddSprite(objects_.Sprites[i], Mat44::Translation(objects_.Positions[i]));
-    }
-
-    // Characters
-    for (int i = 0; i < characters_.Sprites.Count(); ++i)
-    {
-        sr->AddSprite(characters_.Sprites[i], Mat44::Translation(characters_.Positions[i]));
-    }
+    EcsWorld::Iter<const SpriteComponent, const Position>(world_.Get()).EachExcept<Rotation>(
+        [sr](const SpriteComponent sprite, const Position& position)
+        {
+            sr->AddSprite(sprite.sprite_, Mat44::Translation(position));
+        }
+    );
 
     // Projectiles
-    for (int i = 0; i < projectiles_.Sprites.Count(); ++i)
-    {
-        Vec2 pos = projectiles_.Positions[i].XY();
-        sr->AddSprite(
-            projectiles_.Sprites[i],
-            // TODO(pavel): With ECS we should calculate the transform once during update and save it to entity and just read it here and in collider drawing, physics etc.
-            MakeTransform(
-                Vec3(pos.x, pos.y, projectiles_.Positions[i].z),
-                projectiles_.Rotations[i],
-                projectiles_.Sprites[i]->pivot_
-            )
-        );
-    }
 
-    // Targets
-    for (int i = 0; i < targets_.Sprites.Count(); ++i)
-    {
-        sr->AddSprite(targets_.Sprites[i], Mat44::Translation(targets_.Positions[i]));
-    }
+    EcsWorld::Iter<const SpriteComponent, const Position, const Rotation>(world_.Get()).Each(
+        [sr](const SpriteComponent sprite, const Position& position, const Rotation rotation)
+        {
+            sr->AddSprite(
+                sprite.sprite_,
+                // TODO(pavel): With ECS we should calculate the transform once during update and save it to entity and just read it here and in collider drawing, physics etc.
+                MakeTransform(
+                    position,
+                    rotation.angle_,
+                    sprite.sprite_->pivot_
+                )
+            );
+        }
+    );
 
     DrawColliders();
 }
