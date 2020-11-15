@@ -216,8 +216,7 @@ void Game::AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const 
 //------------------------------------------------------------------------------
 void Game::RemoveProjectile(Entity_t eid)
 {
-    // TODO
-    //world_->DeleteEntity(eid);
+    world_->DeleteEntity(eid);
 }
 
 //------------------------------------------------------------------------------
@@ -704,8 +703,8 @@ void Game::Update(float dTime)
 
         // Move projectiles
         {
-            EcsWorld::Iter<Position, Velocity, Rotation>(world_.Get()).Each(
-                [this](Position& position, Velocity& velocity, Rotation& rotation)
+            EcsWorld::Iter<const Entity_t, Position, Velocity, Rotation>(world_.Get()).Each(
+                [this](Entity_t eid, Position& position, Velocity& velocity, Rotation& rotation)
                 {
                     velocity.y += projectileGravity * GetDTime();
                     position.AddXY(velocity * GetDTime());
@@ -714,9 +713,8 @@ void Game::Update(float dTime)
 
                     ImGui::Text("Projectile velocity: [%.2f, %.2f]", velocity.x, velocity.y);
 
-                    // TODO
-                    //if (position.y < -1000)
-                    //    RemoveProjectile(i);
+                    if (position.y < -1000)
+                        RemoveProjectile(eid);
                 }
             );
         }

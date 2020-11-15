@@ -409,6 +409,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             start = std::chrono::high_resolution_clock::now();
 
             float dTime = elapsed.count() / (1000.0f * 1000 * 1000);
+            dTime = hs::Min(dTime, 0.5f);
 
             hs::g_Game->SetWindowActive(g_isWindowActive);
 

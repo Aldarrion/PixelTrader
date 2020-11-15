@@ -371,34 +371,36 @@ private:
     //------------------------------------------------------------------------------
     void EnsureCapacity()
     {
-        if (rowCount_ == rowCapacity_)
-        {
-            rowCapacity_ *= 2;
-            for (int i = 0; i < columns_.Count(); ++i)
-            {
-                // TODO alignment
-                const TypeDetails* details = TypeInfoDb::GetDetails(type_[i]);
-                Column_t newColumn{};
-                if (details->isTrivial_)
-                {
-                    newColumn = realloc(columns_[i], rowCapacity_ * details->size_);
-                }
-                else
-                {
-                    newColumn = malloc(rowCapacity_ * details->size_);
+        if (rowCount_ < rowCapacity_)
+            return;
 
-                    for (uint rowI = 0; rowI < rowCapacity_; ++rowI)
-                    {
-                        void* dst = (byte*)newColumn + rowI * details->size_;
-                        void* src = (byte*)columns_[i] + rowI * details->size_;
-                        details->moveCtor_(dst, src);
-                        details->dtor_(src);
-                    }
-                    free(columns_[i]);
-                }
-                hs_assert(newColumn);
-                columns_[i] = newColumn;
+        hs_assert(rowCount_ == rowCapacity_);
+
+        rowCapacity_ *= 2;
+        for (int i = 0; i < columns_.Count(); ++i)
+        {
+            // TODO alignment
+            const TypeDetails* details = TypeInfoDb::GetDetails(type_[i]);
+            Column_t newColumn{};
+            if (details->isTrivial_)
+            {
+                newColumn = realloc(columns_[i], rowCapacity_ * details->size_);
             }
+            else
+            {
+                newColumn = malloc(rowCapacity_ * details->size_);
+
+                for (uint rowI = 0; rowI < rowCapacity_; ++rowI)
+                {
+                    void* dst = (byte*)newColumn + rowI * details->size_;
+                    void* src = (byte*)columns_[i] + rowI * details->size_;
+                    details->moveCtor_(dst, src);
+                    details->dtor_(src);
+                }
+                free(columns_[i]);
+            }
+            hs_assert(newColumn);
+            columns_[i] = newColumn;
         }
     }
 
@@ -497,22 +499,15 @@ public:
     //------------------------------------------------------------------------------
     void DeleteEntity(Entity_t entity)
     {
-        hs_assert(denseUsedCount_ > 0);
-
-        auto denseIdx = sparse_[entity];
-        auto lastDense = denseUsedCount_ - 1;
-        hs_assert(denseIdx <= denseUsedCount_);
-
-        const auto& record = records_[denseIdx];
-        archetypes_[record.archetype_].RemoveRow(record.rowIndex_);
-
-        if (denseIdx < lastDense)
+        EntityDeleteOperation deleteOp(this, entity);
+        if (IsIterating())
         {
-            SwapEntity(denseIdx, lastDense);
+            deleteOp.Execute();
         }
-
-        // Remove last entity
-        --denseUsedCount_;
+        else
+        {
+            deferredDeletions_.Add(std::move(deleteOp));
+        }
     }
 
     //------------------------------------------------------------------------------
@@ -610,12 +605,14 @@ public:
     template<class... TComponents>
     struct Iter
     {
+        //------------------------------------------------------------------------------
         explicit Iter(EcsWorld* world) : world_(world) {}
 
         //------------------------------------------------------------------------------
         template<class... TAvoidComponents, class TFun>
         void EachExcept(TFun fun)
         {
+            IterScope iterScope(world_);
             static constexpr int COMP_COUNT = sizeof...(TComponents);
             auto seq = std::make_index_sequence<COMP_COUNT>();
 
@@ -649,6 +646,7 @@ public:
         template<class TFun>
         void Each(TFun fun)
         {
+            IterScope iterScope(world_);
             static constexpr int COMP_COUNT = sizeof...(TComponents);
             auto seq = std::make_index_sequence<COMP_COUNT>();
 
@@ -686,9 +684,34 @@ public:
             fun(((TComponents*)arr[Seq])[row]...);
         }
 
+        //------------------------------------------------------------------------------
+        // RAII structure for automatic handling of when iteration starts and ends.
+        struct IterScope
+        {
+            //------------------------------------------------------------------------------
+            [[nodiscard]]
+            IterScope(EcsWorld* world) : world_(world)
+            {
+                ++world_->iteratingDepth_;
+            }
+
+            //------------------------------------------------------------------------------
+            ~IterScope()
+            {
+                hs_assert(world_->IsIterating());
+                --world_->iteratingDepth_;
+
+                if (!world_->IsIterating())
+                    world_->OnIterationEnd();
+            }
+
+        private:
+            EcsWorld* world_;
+        };
     };
 
 private:
+    struct EntityDeleteOperation;
     struct EntityRecord
     {
         uint archetype_;
@@ -699,7 +722,11 @@ private:
     Array<uint>         dense_;
     Array<EntityRecord> records_;
     Array<Archetype>    archetypes_;
+
+    Array<EntityDeleteOperation> deferredDeletions_;
+
     uint                denseUsedCount_{};
+    uint                iteratingDepth_{};
 
     //------------------------------------------------------------------------------
     void SwapEntity(uint denseIdxA, uint denseIdxB)
@@ -751,6 +778,59 @@ private:
         auto denseIdx = sparse_[eid];
         records_[denseIdx].rowIndex_ = rowIdx;
     }
+
+    //------------------------------------------------------------------------------
+    bool IsIterating()
+    {
+        return iteratingDepth_ == 0;
+    }
+
+    //------------------------------------------------------------------------------
+    void OnIterationEnd()
+    {
+        for (int i = 0; i < deferredDeletions_.Count(); ++i)
+        {
+            deferredDeletions_[i].Execute();
+        }
+
+        deferredDeletions_.Clear();
+    }
+
+    //------------------------------------------------------------------------------
+    struct EntityDeleteOperation
+    {
+        //------------------------------------------------------------------------------
+        EntityDeleteOperation(EcsWorld* world, Entity_t entity)
+            : world_(world)
+            , entity_(entity)
+        {
+        }
+
+        //------------------------------------------------------------------------------
+        void Execute()
+        {
+            hs_assert(world_->denseUsedCount_ > 0);
+            auto denseIdx = world_->sparse_[entity_];
+            auto lastDense = world_->denseUsedCount_ - 1;
+            hs_assert(denseIdx <= world_->denseUsedCount_);
+
+            const auto& record = world_->records_[denseIdx];
+            world_->archetypes_[record.archetype_].RemoveRow(record.rowIndex_);
+
+            if (denseIdx < lastDense)
+            {
+                world_->SwapEntity(denseIdx, lastDense);
+            }
+
+            // Remove last entity
+            --world_->denseUsedCount_;
+            world_->records_.RemoveLast();
+        }
+
+    private:
+        EcsWorld* world_;
+        Entity_t entity_;
+    };
 };
 
 //------------------------------------------------------------------------------
