@@ -13,7 +13,7 @@
 #include "game/SpriteRenderer.h"
 #include "game/DebugShapeRenderer.h"
 
-#include "game/Serialization.h"
+#include "Resources/Serialization.h"
 #include "input/Input.h"
 
 #include "common/Logging.h"

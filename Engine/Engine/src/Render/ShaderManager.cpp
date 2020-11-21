@@ -14,6 +14,7 @@ namespace hs
 //------------------------------------------------------------------------------
 static constexpr const char* FRAG_EXT = "fs";
 static constexpr const char* VERT_EXT = "vs";
+constexpr const char* PATH_PREFIX = "../Engine/Shaders/%s";
 
 //------------------------------------------------------------------------------
 const char* ShadercStatusToString(shaderc_compilation_status status)
@@ -82,7 +83,7 @@ shaderc_include_result* ShaderIncludeResolver(
     result->source_name_length = strlen(requestedSource);
 
     char filePath[128];
-    sprintf(filePath, "../shaders/%s", requestedSource);
+    sprintf(filePath, PATH_PREFIX, requestedSource);
 
     char* buffer{};
     size_t size{};
@@ -224,7 +225,6 @@ RESULT ShaderManager::CreateShader(const char* name, Shader* shader)
     shader->id_ = ++shaderId_[stage]; // Pre increment to start with id 1
 
     constexpr uint BUFF_LEN = 1024;
-    constexpr const char* PATH_PREFIX = "../shaders/%s";
     constexpr const uint PATH_PREFIX_LEN = 11;
     if (nameLen > BUFF_LEN - 1 - PATH_PREFIX_LEN)
     {

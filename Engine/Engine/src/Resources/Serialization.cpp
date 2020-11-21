@@ -1,4 +1,4 @@
-#include "game/Serialization.h"
+#include "Resources/Serialization.h"
 
 #include "common/Logging.h"
 

@@ -13,6 +13,8 @@
 
 #include "input/Input.h"
 
+#include "Engine.h"
+
 #include "common/Logging.h"
 #include "common/hs_Assert.h"
 
@@ -240,7 +242,7 @@ void Game::RemoveTarget(Entity_t eid)
 void Game::AnimateSprites()
 {
     EcsWorld::Iter<AnimationState, SpriteComponent>(world_.Get()).Each(
-        [dTime = dTime_]
+        [dTime = GetDTime()]
         (AnimationState& anim, SpriteComponent& sprite)
         {
             anim.Update(dTime);
@@ -477,6 +479,12 @@ RESULT Game::InitWin32()
 }
 
 //------------------------------------------------------------------------------
+float Game::GetDTime()
+{
+    return g_Engine->GetDTime();
+}
+
+//------------------------------------------------------------------------------
 RESULT Game::OnWindowResized()
 {
     InitCamera();
@@ -567,10 +575,8 @@ static float RotationFromDirection(Vec2 dirNormalized)
 }
 
 //------------------------------------------------------------------------------
-void Game::Update(float dTime)
+void Game::Update()
 {
-    dTime_ = dTime;
-
     // Debug
     if (g_Input->IsKeyDown('C'))
     {
@@ -586,7 +592,7 @@ void Game::Update(float dTime)
         }
 
         Vec2& velocity = world_->GetComponent<Velocity>(character_);
-        velocity.y += gravity * GetDTime() * focusMultiplier;
+        velocity.y += gravity * g_Engine->GetDTime() * focusMultiplier;
         velocity.x = 0;
 
         float characterSpeed{ 80 };
@@ -608,7 +614,7 @@ void Game::Update(float dTime)
 
         isGrounded = false;
 
-        Vec2 dtVel = velocity * GetDTime() * focusMultiplier;
+        Vec2 dtVel = velocity * g_Engine->GetDTime() * focusMultiplier;
 
         Vec2 pos2 = pos.XY();
         const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(character_);
@@ -678,7 +684,7 @@ void Game::Update(float dTime)
             ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
         ImGui::End();
 
-        timeToShoot = Max(timeToShoot - dTime, 0.0f);
+        timeToShoot = Max(timeToShoot - GetDTime(), 0.0f);
         if (g_Input->IsButtonDown(BTN_LEFT) && timeToShoot <= 0)
         {
             timeToShoot = SHOOT_COOLDOWN;
@@ -706,8 +712,8 @@ void Game::Update(float dTime)
             EcsWorld::Iter<const Entity_t, Position, Velocity, Rotation>(world_.Get()).Each(
                 [this](Entity_t eid, Position& position, Velocity& velocity, Rotation& rotation)
                 {
-                    velocity.y += projectileGravity * GetDTime();
-                    position.AddXY(velocity * GetDTime());
+                    velocity.y += projectileGravity * g_Engine->GetDTime();
+                    position.AddXY(velocity * g_Engine->GetDTime());
 
                     rotation.angle_ = RotationFromDirection(velocity.Normalized());
 
@@ -786,24 +792,6 @@ void Game::Update(float dTime)
     );
 
     DrawColliders();
-}
-
-//------------------------------------------------------------------------------
-float Game::GetDTime() const
-{
-    return dTime_;
-}
-
-//------------------------------------------------------------------------------
-bool Game::IsWindowActive() const
-{
-    return isWindowActive_;
-}
-
-//------------------------------------------------------------------------------
-void Game::SetWindowActive(bool isActive)
-{
-    isWindowActive_ = isActive;
 }
 
 }

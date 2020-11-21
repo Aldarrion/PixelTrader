@@ -2,7 +2,7 @@
 
 #include "Config.h"
 
-#include "game/Camera.h"
+#include "World/Camera.h"
 
 #include "render/VertexBufferEntry.h"
 #include "render/DynamicUniformBufferEntry.h"
@@ -17,7 +17,7 @@
 #include "common/Enums.h"
 #include "common/Types.h"
 
-#include "platform/hs_Windows.h"
+#include "Platform/hs_Windows.h"
 
 #include <unordered_map> // TODO use custom hashmap
 

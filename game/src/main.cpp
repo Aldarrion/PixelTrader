@@ -3,6 +3,7 @@
 #include "render/Render.h"
 #include "input/Input.h"
 #include "resources/ResourceManager.h"
+#include "Engine.h"
 
 #include "common/Logging.h"
 #include "common/Types.h"
@@ -263,6 +264,20 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     if (HS_FAILED(InitWindow(width, height, instance)))
         return -1;
 
+    // Engine
+    if (HS_FAILED(hs::CreateEngine()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to create engine");
+        return -1;
+    }
+    hs_assert(hs::g_Engine);
+
+    if (HS_FAILED(hs::g_Engine->InitWin32()))
+    {
+        hs::Log(hs::LogLevel::Error, "Failed to init engine");
+        return -1;
+    }
+
     // Resource manager
     if (HS_FAILED(hs::CreateResourceManager()))
     {
@@ -411,13 +426,14 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
             float dTime = elapsed.count() / (1000.0f * 1000 * 1000);
             dTime = hs::Min(dTime, 0.5f);
 
-            hs::g_Game->SetWindowActive(g_isWindowActive);
+            hs::g_Engine->SetWindowActive(g_isWindowActive);
 
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
             hs::g_Input->Update();
-            hs::g_Game->Update(dTime);
+            hs::g_Engine->Update(dTime);
+            hs::g_Game->Update();
             hs::g_Render->Update(dTime);
 
             hs::g_Input->EndFrame();
@@ -429,6 +445,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     hs::DestroyInput();
     hs::DestroyRender();
     hs::DestroyResourceManager();
+    hs::DestroyEngine();
     HsDestroyImgui();
 
     return 0;

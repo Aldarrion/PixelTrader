@@ -1,14 +1,16 @@
 #pragma once
 
-#include "game/Camera.h"
-#include "game/SpriteRenderer.h"
+#include "World/Camera.h"
+#include "Game/SpriteRenderer.h"
 
-#include "ecs/Ecs.h"
+#include "Ecs/Ecs.h"
 
-#include "containers/Array.h"
+#include "Game/GameBase.h"
 
-#include "common/Enums.h"
-#include "common/Types.h"
+#include "Containers/Array.h"
+
+#include "Common/Enums.h"
+#include "Common/Types.h"
 
 
 namespace hs
@@ -35,18 +37,14 @@ struct AnimationSegment
 struct AnimationState;
 
 //------------------------------------------------------------------------------
-class Game
+class Game : public GameBase
 {
 public:
     ~Game();
 
     RESULT InitWin32();
     RESULT OnWindowResized();
-    void Update(float dTime);
-
-    float GetDTime() const;
-    bool IsWindowActive() const;
-    void SetWindowActive(bool isActive);
+    void Update();
 
 private:
     enum GroundTile
@@ -64,10 +62,6 @@ private:
 
     UniquePtr<EcsWorld> world_;
 
-    bool isWindowActive_{};
-
-    float dTime_{};
-
     Sprite groundSprite_[3 * 3]{};
     Sprite goldChestSprite_{};
     Sprite rockSprite_[2]{};
@@ -84,6 +78,8 @@ private:
 
     void InitEcs();
     void InitCamera();
+
+    float GetDTime();
 
     void AddSprite(const Vec3& pos, Sprite* sprite);
     void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);

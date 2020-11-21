@@ -140,7 +140,7 @@ struct Vec2
     //------------------------------------------------------------------------------
     float Length() const
     {
-        return sqrt(LengthSqr());
+        return sqrtf(LengthSqr());
     }
 
     //------------------------------------------------------------------------------
@@ -167,7 +167,7 @@ struct Vec2
     //------------------------------------------------------------------------------
     float Distance(Vec2 v) const
     {
-        return sqrt(DistanceSqr(v));
+        return sqrtf(DistanceSqr(v));
     }
 
     //------------------------------------------------------------------------------
@@ -338,7 +338,7 @@ struct Vec3
     //------------------------------------------------------------------------------
     float Length() const
     {
-        return sqrt(LengthSqr());
+        return sqrtf(LengthSqr());
     }
 
     //------------------------------------------------------------------------------
@@ -743,7 +743,7 @@ inline Mat44 MakeOrthographicProjection(float l, float r, float t, float b, floa
 //! s = aspect ratio (width / height)
 inline Mat44 MakePerspectiveProjection(float fovy, float s, float n, float f)
 {
-    const float g = 1.0f / tan(fovy * 0.5f);
+    const float g = 1.0f / tanf(fovy * 0.5f);
     const float k = f / (f - n);
     return Mat44(
         g / s,  0,      0,      0,
@@ -779,18 +779,18 @@ inline Mat44 MakeLookAt(const Vec3& pos, const Vec3& target)
 inline float ToLinear(float srgb)
 {
     if (srgb <= 0.04045)
-        return srgb / 12.92;
+        return float(srgb / 12.92);
     else
-        return pow((srgb + 0.055) / 1.055, 2.4);
+        return float(pow((srgb + 0.055) / 1.055, 2.4));
 }
 
 //------------------------------------------------------------------------------
 inline float ToSrgb(float linear)
 {
     if (linear <= 0.0031308)
-        return linear * 12.92;
+        return float(linear * 12.92);
     else
-        return 1.055 * pow(linear, 1.0 / 2.4) - 0.055;
+        return float(1.055 * pow(linear, 1.0 / 2.4) - 0.055);
 }
 
 //------------------------------------------------------------------------------

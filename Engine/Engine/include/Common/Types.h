@@ -1,7 +1,7 @@
 #pragma once
 #include "Config.h"
 
-#include "common/hs_Assert.h"
+#include "Common/hs_Assert.h"
 
 #include <cstdint>
 
