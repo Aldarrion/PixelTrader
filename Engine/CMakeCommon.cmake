@@ -1,4 +1,4 @@
-function(SetupCompiler projectName)
+macro(SetupCompiler projectName)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
         target_compile_options(${projectName} PUBLIC -Werror)
@@ -41,4 +41,4 @@ function(SetupCompiler projectName)
         add_definitions(-D_HAS_ITERATOR_DEBUGGING=0)
         add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
     endif()
-endfunction()
+endmacro()
