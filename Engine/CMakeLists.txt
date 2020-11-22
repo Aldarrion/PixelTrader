@@ -67,6 +67,34 @@ target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/vulkan-1.lib")
 target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/shaderc_shared.lib")
 
 ##
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(${PROJ_NAME} PUBLIC -Werror)
+
+    target_compile_options(${PROJ_NAME} PUBLIC -fsanitize=undefined)
+
+    target_compile_options(${PROJ_NAME} PUBLIC -Wno-unused-private-field)
+    target_compile_options(${PROJ_NAME} PUBLIC -Wno-nullability-completeness)
+    target_compile_options(${PROJ_NAME} PUBLIC -Wno-range-loop-construct)
+
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
+
+    # Warnings as errors
+    target_compile_options(${PROJ_NAME} PUBLIC /WX)
+    target_compile_options(${PROJ_NAME} PUBLIC "/wd4267") # conversion from 'size_t' to 'uint', possible loss of data
+    target_compile_options(${PROJ_NAME} PUBLIC "/wd4244") # conversion from 'LONG' to 'float', possible loss of data
+endif()
+
+if(MSVC)
+    # shaderc is compiled with /MD so we cannot compile with /MDd even on debug or we would need to rebuild the shaderc_combined.lib
+    set_target_properties(${PROJ_NAME} ImGui
+        PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded"
+    )
+
+    # Also for shaderc
+    target_compile_definitions(${PROJ_NAME} PRIVATE _HAS_ITERATOR_DEBUGGING=0 _ITERATOR_DEBUG_LEVEL=0)
+endif()
+
 include(CMakeCommon.cmake)
 SetupCompiler(${PROJ_NAME})
 
