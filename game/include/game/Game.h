@@ -23,10 +23,6 @@ class Texture;
 extern class Game* g_Game;
 
 //------------------------------------------------------------------------------
-RESULT CreateGame();
-void DestroyGame();
-
-//------------------------------------------------------------------------------
 struct AnimationSegment
 {
     Sprite* sprite_;

@@ -154,8 +154,11 @@ Sprite* AnimationState::GetCurrentSprite() const
 //------------------------------------------------------------------------------
 RESULT CreateGame()
 {
+    hs_assert(!g_GameBase);
     hs_assert(!g_Game);
+
     g_Game = new Game();
+    g_GameBase = g_Game;
 
     return R_OK;
 }
@@ -164,6 +167,9 @@ RESULT CreateGame()
 void DestroyGame()
 {
     delete g_Game;
+
+    g_Game = nullptr;
+    g_GameBase = nullptr;
 }
 
 //------------------------------------------------------------------------------
