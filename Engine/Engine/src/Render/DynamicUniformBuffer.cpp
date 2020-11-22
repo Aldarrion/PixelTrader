@@ -1,9 +1,9 @@
-#include "render/DynamicUniformBuffer.h"
+#include "Render/DynamicUniformBuffer.h"
 
-#include "render/Allocator.h"
-#include "render/Render.h"
-#include "math/hs_Math.h"
-#include "common/Logging.h"
+#include "Render/Allocator.h"
+#include "Render/Render.h"
+#include "Math/hs_Math.h"
+#include "Common/Logging.h"
 
 namespace hs
 {
@@ -45,7 +45,7 @@ void* DynamicUniformBuffer::Map()
     void* mapped{};
     if (VKR_FAILED(vmaMapMemory(g_Render->GetAllocator(), allocation_, &mapped)))
         return nullptr;
-    
+
     return mapped;
 }
 

@@ -1,2 +1,2 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "render/hs_Image.h"
+#include "Render/hs_Image.h"

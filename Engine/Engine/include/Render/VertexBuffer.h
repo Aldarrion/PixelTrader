@@ -1,12 +1,12 @@
 #pragma once
 
-#include "render/VkTypes.h"
-#include "render/VertexBufferEntry.h"
+#include "Render/VkTypes.h"
+#include "Render/VertexBufferEntry.h"
 
-#include "containers/Array.h"
+#include "Containers/Array.h"
 
-#include "common/Enums.h"
-#include "common/Types.h"
+#include "Common/Enums.h"
+#include "Common/Types.h"
 
 namespace hs
 {

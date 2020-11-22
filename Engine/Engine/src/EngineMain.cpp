@@ -1,15 +1,15 @@
 
 #include "Game/GameBase.h"
-#include "render/Render.h"
-#include "input/Input.h"
-#include "resources/ResourceManager.h"
+#include "Render/Render.h"
+#include "Input/Input.h"
+#include "Resources/ResourceManager.h"
 #include "Engine.h"
 
-#include "common/Logging.h"
-#include "common/Types.h"
-#include "common/hs_Assert.h"
+#include "Common/Logging.h"
+#include "Common/Types.h"
+#include "Common/hs_Assert.h"
 
-#include "platform/hs_Windows.h"
+#include "Platform/hs_Windows.h"
 
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui.h"

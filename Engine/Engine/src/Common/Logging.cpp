@@ -1,11 +1,11 @@
-#include "common/Logging.h"
+#include "Common/Logging.h"
 
-#include "common/Types.h"
-#include "common/hs_Assert.h"
+#include "Common/Types.h"
+#include "Common/hs_Assert.h"
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
-#include "platform/hs_Windows.h"
+#include "Platform/hs_Windows.h"
 
 #include <stdio.h>
 #include <stdarg.h>

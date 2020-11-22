@@ -2,10 +2,10 @@
 
 #include "Config.h"
 
-#include "containers/Array.h"
+#include "Containers/Array.h"
 
-#include "common/Types.h"
-#include "common/Util.h"
+#include "Common/Types.h"
+#include "Common/Util.h"
 
 #include <algorithm> // For std::sort
 

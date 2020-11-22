@@ -1,8 +1,8 @@
-#include "game/SpriteRenderer.h"
+#include "Game/SpriteRenderer.h"
 
-#include "render/Render.h"
+#include "Render/Render.h"
 
-#include "common/Logging.h"
+#include "Common/Logging.h"
 
 namespace hs
 {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "containers/Array.h"
-#include "containers/Hash.h"
+#include "Containers/Array.h"
+#include "Containers/Hash.h"
 
-#include "common/Enums.h"
+#include "Common/Enums.h"
 
 #include <unordered_map>
 

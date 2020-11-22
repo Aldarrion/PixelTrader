@@ -1,7 +1,7 @@
 #ifdef __cplusplus
 #pragma once
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
 namespace hs
 {

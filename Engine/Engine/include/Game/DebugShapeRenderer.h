@@ -2,13 +2,13 @@
 
 #include "Config.h"
 
-#include "render/Material.h"
+#include "Render/Material.h"
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
-#include "containers/Array.h"
+#include "Containers/Array.h"
 
-#include "common/Enums.h"
+#include "Common/Enums.h"
 
 namespace hs
 {

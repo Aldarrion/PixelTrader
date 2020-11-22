@@ -1,4 +1,4 @@
-#include "ecs/Ecs.h"
+#include "Ecs/Ecs.h"
 
 namespace hs
 {

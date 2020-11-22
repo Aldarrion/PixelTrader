@@ -1,11 +1,11 @@
 #pragma once
 
-#include "render/DynamicUniformBufferEntry.h"
+#include "Render/DynamicUniformBufferEntry.h"
 
-#include "common/Types.h"
-#include "render/VkTypes.h"
-#include "common/Enums.h"
-#include "containers/Array.h"
+#include "Common/Types.h"
+#include "Render/VkTypes.h"
+#include "Common/Enums.h"
+#include "Containers/Array.h"
 
 namespace hs
 {

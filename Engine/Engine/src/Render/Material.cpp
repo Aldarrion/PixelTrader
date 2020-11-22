@@ -1,14 +1,14 @@
-#include "render/Material.h"
+#include "Render/Material.h"
 
-#include "render/Render.h"
-#include "render/Texture.h"
-#include "render/ShaderManager.h"
-#include "render/VertexBuffer.h"
-#include "render/DynamicUniformBuffer.h"
-#include "render/VertexTypes.h"
-#include "input/Input.h"
+#include "Render/Render.h"
+#include "Render/Texture.h"
+#include "Render/ShaderManager.h"
+#include "Render/VertexBuffer.h"
+#include "Render/DynamicUniformBuffer.h"
+#include "Render/VertexTypes.h"
+#include "Input/Input.h"
 
-#include "render/hs_Image.h"
+#include "Render/hs_Image.h"
 
 #include "Common.h"
 
@@ -142,7 +142,7 @@ void SpriteMaterial::DrawSprite(const SpriteDrawData& data)
             vertPos.x,
             vertPos.y,
             vertPos.z,
-            1 
+            1
         };
         mapped[0].uv_ = Vec2{ data.uvBox_.x, data.uvBox_.y + data.uvBox_.w };
         mapped[0].color_ = 0xffffffff;
@@ -151,7 +151,7 @@ void SpriteMaterial::DrawSprite(const SpriteDrawData& data)
             data.size_.x + vertPos.x,
             vertPos.y,
             vertPos.z,
-            1 
+            1
         };
         mapped[1].uv_ = Vec2{ data.uvBox_.x + data.uvBox_.z, data.uvBox_.y + data.uvBox_.w };
         mapped[1].color_ = 0xffffffff;
@@ -193,7 +193,7 @@ void SpriteMaterial::DrawSprite(const SpriteDrawData& data)
         mapped[5].color_ = 0xffffffff;
 
         g_Render->GetVertexCache()->EndAlloc();
-        
+
         g_Render->SetVertexBuffer(0, vbEntry);
     }
 
@@ -211,7 +211,7 @@ void SpriteMaterial::DrawSprite(const SpriteDrawData& data)
     SetSceneData();
 
     g_Render->SetVertexLayout(0, vertexLayout_);
-    
+
     g_Render->SetTexture(0, data.texture_);
 
     g_Render->SetShader<PS_VERT>(vs_);
@@ -292,7 +292,7 @@ RESULT TexturedTriangleMaterial::Init()
 
         auto texAllocRes = texture_->Allocate((void**)&pixels, "GrassTile");
         stbi_image_free(pixels);
-    
+
         if (FAILED(texAllocRes))
             return R_FAIL; // TODO release resources
     }
@@ -305,7 +305,7 @@ RESULT TexturedTriangleMaterial::Init()
 
         auto texAllocRes = textureTree_->Allocate((void**)&pixels, "Tree");
         stbi_image_free(pixels);
-    
+
         if (FAILED(texAllocRes))
             return R_FAIL; // TODO release resources
     }
@@ -318,7 +318,7 @@ RESULT TexturedTriangleMaterial::Init()
 
         auto texAllocRes = textureBox_->Allocate((void**)&pixels, "Box");
         stbi_image_free(pixels);
-    
+
         if (FAILED(texAllocRes))
             return R_FAIL; // TODO release resources
     }
@@ -404,7 +404,7 @@ RESULT SkyboxMaterial::Init()
         auto texAllocRes = skyboxCubemap_->Allocate((void**)pixels, "Skybox");
         for (uint i = 0; i < hs_arr_len(pixels); ++i)
             stbi_image_free(pixels[i]);
-    
+
         if (FAILED(texAllocRes))
             return R_FAIL; // TODO release resources
     }

@@ -2,12 +2,12 @@
 
 #include "Config.h"
 
-#include "containers/Array.h"
-#include "containers/Hash.h"
+#include "Containers/Array.h"
+#include "Containers/Hash.h"
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
-#include "common/Enums.h"
+#include "Common/Enums.h"
 
 #include <cstdlib>
 

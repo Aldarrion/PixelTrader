@@ -1,12 +1,12 @@
-#include "game/DrawCanvas.h"
+#include "Game/DrawCanvas.h"
 
-#include "render/Render.h"
-#include "render/ShaderManager.h"
-#include "render/VertexTypes.h"
-#include "render/VertexBuffer.h"
-#include "input/Input.h"
+#include "Render/Render.h"
+#include "Render/ShaderManager.h"
+#include "Render/VertexTypes.h"
+#include "Render/VertexBuffer.h"
+#include "Input/Input.h"
 
-#include "common/Logging.h"
+#include "Common/Logging.h"
 
 namespace hs
 {
@@ -87,7 +87,7 @@ void DrawCanvas::Draw()
                 float t = (float)j / tesselLevel;
                 float t2 = t * t;
                 float t3 = t2 * t;
-                Vec2 pos = 
+                Vec2 pos =
                     (2 * t3 - 3 * t2 + 1) * p0
                     + (t3 - 2 * t2 + t) * m0
                     + (-2 * t3 + 3 * t2) * p1

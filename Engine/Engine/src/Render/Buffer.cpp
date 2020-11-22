@@ -1,7 +1,7 @@
-#include "render/Buffer.h"
+#include "Render/Buffer.h"
 
-#include "render/Render.h"
-#include "render/Allocator.h"
+#include "Render/Render.h"
+#include "Render/Allocator.h"
 
 namespace hs
 {

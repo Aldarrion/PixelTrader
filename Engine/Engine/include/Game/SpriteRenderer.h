@@ -1,10 +1,10 @@
 #pragma once
 
-#include "common/Enums.h"
+#include "Common/Enums.h"
 
-#include "render/Material.h"
+#include "Render/Material.h"
 
-#include "containers/Array.h"
+#include "Containers/Array.h"
 
 namespace hs
 {

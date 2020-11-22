@@ -1,8 +1,8 @@
 #pragma once
 
-#include "render/VkTypes.h"
-#include "common/Enums.h"
-#include "common/Types.h"
+#include "Render/VkTypes.h"
+#include "Common/Enums.h"
+#include "Common/Types.h"
 
 namespace hs
 {

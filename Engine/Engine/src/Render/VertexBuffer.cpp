@@ -1,8 +1,8 @@
-#include "render/VertexBuffer.h"
+#include "Render/VertexBuffer.h"
 
-#include "render/Render.h"
-#include "render/Allocator.h"
-#include "common/Logging.h"
+#include "Render/Render.h"
+#include "Render/Allocator.h"
+#include "Common/Logging.h"
 
 namespace hs
 {
@@ -37,7 +37,7 @@ void* VertexBuffer::Map()
     void* mapped{};
     if (VKR_FAILED(vmaMapMemory(g_Render->GetAllocator(), allocation_, &mapped)))
         return nullptr;
-    
+
     return mapped;
 }
 

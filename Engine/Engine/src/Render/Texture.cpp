@@ -1,11 +1,11 @@
-#include "render/Texture.h"
+#include "Render/Texture.h"
 
-#include "render/Render.h"
-#include "render/Allocator.h"
-#include "render/Buffer.h"
-#include "common/Logging.h"
+#include "Render/Render.h"
+#include "Render/Allocator.h"
+#include "Render/Buffer.h"
+#include "Common/Logging.h"
 
-#include "render/hs_Image.h"
+#include "Render/hs_Image.h"
 
 namespace hs
 {
@@ -40,7 +40,7 @@ RESULT Texture::CreateTex2D(const char* file, const char* name, Texture** tex)
     }
 
     *tex = new Texture(VK_FORMAT_R8G8B8A8_SRGB, VkExtent3D{ (uint)texWidth, (uint)texHeight, 1 }, Texture::Type::TEX_2D);
-    
+
     auto texAllocRes = (*tex)->Allocate((void**)&pixels, name);
     stbi_image_free(pixels);
 
@@ -131,7 +131,7 @@ RESULT Texture::Allocate(void** data, const char* diagName)
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
 
-        // For cube and cube array image views, the layers of the image view starting at 
+        // For cube and cube array image views, the layers of the image view starting at
         // baseArrayLayer correspond to faces in the order +X, -X, +Y, -Y, +Z, -Z.
         for (uint i = 0; i < imgInfo.arrayLayers; ++i)
         {

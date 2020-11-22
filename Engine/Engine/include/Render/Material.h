@@ -2,12 +2,12 @@
 
 #include "Config.h"
 
-#include "containers/Span.h"
+#include "Containers/Span.h"
 
-#include "common/Pointers.h"
-#include "common/Enums.h"
-#include "common/Types.h"
-#include "math/hs_Math.h"
+#include "Common/Pointers.h"
+#include "Common/Enums.h"
+#include "Common/Types.h"
+#include "Math/hs_Math.h"
 
 namespace hs
 {

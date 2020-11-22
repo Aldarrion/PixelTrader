@@ -1,7 +1,7 @@
 #pragma once
 
-#include "render/VkTypes.h"
-#include "common/Types.h"
+#include "Render/VkTypes.h"
+#include "Common/Types.h"
 
 namespace hs
 {

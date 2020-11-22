@@ -1,24 +1,24 @@
-#include "render/Render.h"
+#include "Render/Render.h"
 
-#include "render/Allocator.h"
-#include "render/Shader.h"
-#include "render/Material.h"
-#include "render/Texture.h"
-#include "render/ShaderManager.h"
-#include "render/VertexBuffer.h"
-#include "render/DynamicUniformBuffer.h"
-#include "render/hs_Vulkan.h"
+#include "Render/Allocator.h"
+#include "Render/Shader.h"
+#include "Render/Material.h"
+#include "Render/Texture.h"
+#include "Render/ShaderManager.h"
+#include "Render/VertexBuffer.h"
+#include "Render/DynamicUniformBuffer.h"
+#include "Render/hs_Vulkan.h"
 
-#include "game/DrawCanvas.h"
-#include "game/SpriteRenderer.h"
-#include "game/DebugShapeRenderer.h"
+#include "Game/DrawCanvas.h"
+#include "Game/SpriteRenderer.h"
+#include "Game/DebugShapeRenderer.h"
 
 #include "Resources/Serialization.h"
-#include "input/Input.h"
+#include "Input/Input.h"
 
-#include "common/Logging.h"
-#include "common/hs_Assert.h"
-#include "common/Util.h"
+#include "Common/Logging.h"
+#include "Common/hs_Assert.h"
+#include "Common/Util.h"
 
 #include "vulkan/vulkan_win32.h"
 
@@ -116,8 +116,8 @@ bool CheckResult(VkResult result, const char* file, int line, const char* fun)
     }
     /*
     void DestroyDebugReportCallbackEXT(
-        VkInstance instance, 
-        VkDebugReportCallbackEXT callback, 
+        VkInstance instance,
+        VkDebugReportCallbackEXT callback,
         const VkAllocationCallbacks* pAllocator
     );*/
 #endif
@@ -239,7 +239,7 @@ RESULT Render::OnWindowResized(uint width, uint height)
     if (HS_FAILED(CreateSwapchain()))
         return R_FAIL;
 
-    // TODO(pavel): This is not nice, we should not use currentBBIdx_ given from vkAcquireNextImageKHR, 
+    // TODO(pavel): This is not nice, we should not use currentBBIdx_ given from vkAcquireNextImageKHR,
     if (oldBBIdx != currentBBIdx_)
     {
         std::swap(directQueueFences_[currentBBIdx_], directQueueFences_[oldBBIdx]);
@@ -405,10 +405,10 @@ RESULT Render::CreateSwapchain()
         imageViewInfo.format            = swapChainFormat_;
         imageViewInfo.components        = VkComponentMapping { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
         imageViewInfo.subresourceRange  = subresource;
-        
+
         if (VKR_FAILED(vkCreateImageView(vkDevice_, &imageViewInfo, nullptr, &bbViews_[i])))
             return R_FAIL;
-        
+
         if (VKR_FAILED(SetDiagName(vkDevice_, (uint64)bbImages_[i], VK_OBJECT_TYPE_IMAGE, "BackBuffer")))
             return R_FAIL;
 
@@ -435,7 +435,7 @@ RESULT Render::CreateSwapchain()
         depthViewInfo.image               = depthImages_[i];
         depthViewInfo.viewType            = VK_IMAGE_VIEW_TYPE_2D;
         depthViewInfo.format              = VK_FORMAT_D24_UNORM_S8_UINT;
-        
+
         depthViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         depthViewInfo.subresourceRange.baseMipLevel = 0;
         depthViewInfo.subresourceRange.levelCount = 1;
@@ -766,14 +766,14 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         VkBool32 presentSupport{};
         presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(vkPhysicalDevice_, i);
         //VKR_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice_, i, vkSurface_, &presentSupport));
-        
+
         #if HS_DEBUG
             static char buff[512];
             QueueFamiliesToString(queueProps[i].queueFlags, buff);
             Log(LogLevel::Info, "\t%d: count %d, present %d, bits %s", i, queueProps[i].queueCount, presentSupport, buff);
         #endif
 
-        if (directQueueFamilyIdx_ == VKR_INVALID 
+        if (directQueueFamilyIdx_ == VKR_INVALID
             && (queueProps[i].queueFlags & directQueueBits) == directQueueBits
             && queueProps[i].queueCount > 0
             && presentSupport)
@@ -821,7 +821,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     deviceInfo.enabledExtensionCount    = hs_arr_len(deviceExt);
     deviceInfo.ppEnabledExtensionNames  = deviceExt;
     deviceInfo.pEnabledFeatures         = &deviceFeatures;
-        
+
     if (VKR_FAILED(vkCreateDevice(vkPhysicalDevice_, &deviceInfo, nullptr, &vkDevice_)))
         return R_FAIL;
 
@@ -944,7 +944,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     VkSampler skyboxSampler{};
     if (VKR_FAILED(vkCreateSampler(vkDevice_, &skyboxSampInfo, nullptr, &skyboxSampler)))
         return R_FAIL;
-    
+
     VkDescriptorSetLayoutBinding bindings[2]{};
     bindings[0].binding             = 0;
     bindings[0].descriptorType      = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -985,7 +985,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     bindlessSrv.flags           = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
     bindlessSrv.bindingCount    = hs_arr_len(srvBindings);
     bindlessSrv.pBindings       = srvBindings;
-    
+
     if (VKR_FAILED(vkCreateDescriptorSetLayout(vkDevice_, &bindlessSrv, nullptr, &bindlessTexturesLayout_)))
         return R_FAIL;
 
@@ -1037,7 +1037,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         poolInfo.maxSets        = 1;
         poolInfo.poolSizeCount  = hs_arr_len(poolSizes);
         poolInfo.pPoolSizes     = poolSizes;
-    
+
         if (VKR_FAILED(vkCreateDescriptorPool(vkDevice_, &poolInfo, nullptr, &bindlessPool_)))
             return R_FAIL;
 
@@ -1062,7 +1062,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
         immutableSampler.maxSets        = 1;
         immutableSampler.poolSizeCount  = hs_arr_len(immutableSamplerSizes);
         immutableSampler.pPoolSizes     = immutableSamplerSizes;
-    
+
         if (VKR_FAILED(vkCreateDescriptorPool(vkDevice_, &immutableSampler, nullptr, &immutableSamplerPool_)))
             return R_FAIL;
 
@@ -1123,7 +1123,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
     //materials_.Add(new ShapeMaterial());
     //materials_.Add(new PhongMaterial());
     //materials_.Add(new SpriteMaterial());
-    
+
     for (int i = 0; i < materials_.Count(); ++i)
     {
         if (HS_FAILED(materials_[i]->Init()))
@@ -1135,7 +1135,7 @@ RESULT Render::InitWin32(HWND hwnd, HINSTANCE hinst)
 
     camera_.UpdateMatrics();
 
-    // 
+    //
     serializationManager_ = MakeUnique<SerializationManager>();
     if (HS_FAILED(serializationManager_->Init()))
         return R_FAIL;
@@ -1346,7 +1346,7 @@ RESULT Render::PrepareForDraw()
         stages[0].module    = state_.shaders_[PS_VERT]->vkShader_;
         stages[0].pName     = "main";
     }
-    
+
     if (state_.shaders_[PS_FRAG])
     {
         ++numStages;
@@ -1501,7 +1501,7 @@ RESULT Render::PrepareForDraw()
 
     uint dynOffsets[DYNAMIC_UBO_COUNT + 1]{};
     dynOffsets[0] = state_.bindlessUBO_.dynOffset_;
-    
+
     VkWriteDescriptorSet UBOWrites[DYNAMIC_UBO_COUNT + 1]{};
     UBOWrites[0].sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     UBOWrites[0].dstSet             = state_.uboDescSet_;
@@ -1797,7 +1797,7 @@ void RenderState::Reset()
     }
 
     primitiveTopology_ = VkrPrimitiveTopology::TRIANGLE_LIST;
-    
+
     cullMode_ = VkrCullMode::Back;
     depthState_ = DS_TEST | DS_WRITE;
 }

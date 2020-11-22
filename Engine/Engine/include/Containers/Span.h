@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/Types.h"
-#include "common/hs_Assert.h"
+#include "Common/Types.h"
+#include "Common/hs_Assert.h"
 
 namespace hs
 {

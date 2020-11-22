@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Config.h"
-#include "common/Enums.h"
+#include "Common/Enums.h"
 
-#include "containers/Array.h"
-#include "containers/Hash.h"
+#include "Containers/Array.h"
+#include "Containers/Hash.h"
 
-#include "render/VkTypes.h"
+#include "Render/VkTypes.h"
 #include <unordered_map>
 
 struct shaderc_compiler;
@@ -31,7 +31,7 @@ public:
 private:
     // TODO use custom hashmap
     std::unordered_map<const char*, Shader*, StrHash<const char*>, StrCmpEq<const char*>> cache_;
-    
+
     Array<VkShaderModule>       toDestroy_;
     shaderc_compiler*           shadercCompiler_{};
     shaderc_compile_options*    opts_{};

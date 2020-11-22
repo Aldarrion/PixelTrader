@@ -70,7 +70,7 @@ target_link_libraries(${PROJ_NAME} "${VK_SDK_DIR}/Lib/shaderc_shared.lib")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(${PROJ_NAME} PUBLIC -Werror)
 
-    target_compile_options(${PROJ_NAME} PUBLIC -fsanitize=undefined)
+    #target_compile_options(${PROJ_NAME} PUBLIC -fsanitize=undefined)
 
     target_compile_options(${PROJ_NAME} PUBLIC -Wno-unused-private-field)
     target_compile_options(${PROJ_NAME} PUBLIC -Wno-nullability-completeness)
@@ -92,7 +92,7 @@ if(MSVC)
     )
 
     # Also for shaderc
-    target_compile_definitions(${PROJ_NAME} PRIVATE _HAS_ITERATOR_DEBUGGING=0 _ITERATOR_DEBUG_LEVEL=0)
+    target_compile_definitions(${PROJ_NAME} PUBLIC _HAS_ITERATOR_DEBUGGING=0 _ITERATOR_DEBUG_LEVEL=0)
 endif()
 
 include(CMakeCommon.cmake)

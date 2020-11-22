@@ -1,7 +1,7 @@
 #pragma once
 
-#include "render/Render.h"
-#include "math/hs_Math.h"
+#include "Render/Render.h"
+#include "Math/hs_Math.h"
 
 namespace hs
 {

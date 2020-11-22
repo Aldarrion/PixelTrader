@@ -1,12 +1,12 @@
-#include "input/Input.h"
+#include "Input/Input.h"
 
 #include "Engine.h"
 
-#include "render/Render.h"
+#include "Render/Render.h"
 
-#include "common/Logging.h"
+#include "Common/Logging.h"
 
-#include "platform/hs_Windows.h"
+#include "Platform/hs_Windows.h"
 
 namespace hs
 {

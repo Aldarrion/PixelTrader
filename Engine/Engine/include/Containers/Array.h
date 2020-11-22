@@ -1,9 +1,9 @@
 #pragma once
 
-#include "containers/Span.h"
+#include "Containers/Span.h"
 
-#include "common/Types.h"
-#include "common/hs_Assert.h"
+#include "Common/Types.h"
+#include "Common/hs_Assert.h"
 
 #include <cstdlib>
 #include <cstring>

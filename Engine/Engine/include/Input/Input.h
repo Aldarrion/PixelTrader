@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Config.h"
-#include "common/Types.h"
-#include "common/Enums.h"
-#include "containers/Array.h"
+#include "Common/Types.h"
+#include "Common/Enums.h"
+#include "Containers/Array.h"
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
-#include "platform/hs_Windows.h"
+#include "Platform/hs_Windows.h"
 
 namespace hs
 {
@@ -56,7 +56,7 @@ public:
 
     bool IsKeyDown(int keyCode) const;
     bool IsKeyUp(int keyCode) const;
-    
+
     // For both keys and buttons
     bool GetState(int keyCode) const;
 

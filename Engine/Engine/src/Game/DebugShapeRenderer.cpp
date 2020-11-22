@@ -1,4 +1,4 @@
-#include "game/DebugShapeRenderer.h"
+#include "Game/DebugShapeRenderer.h"
 
 #include <utility>
 

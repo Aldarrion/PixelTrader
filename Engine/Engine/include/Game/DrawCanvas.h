@@ -2,13 +2,13 @@
 
 #include "Config.h"
 
-#include "containers/Array.h"
+#include "Containers/Array.h"
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
-#include "common/Pointers.h"
-#include "common/Enums.h"
-#include "common/Types.h"
+#include "Common/Pointers.h"
+#include "Common/Enums.h"
+#include "Common/Types.h"
 
 namespace hs
 {

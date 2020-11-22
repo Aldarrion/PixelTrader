@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/hs_Assert.h"
+#include "Common/hs_Assert.h"
 
 #include <cstddef>
 
@@ -42,7 +42,7 @@ public:
 
         delete ptr_;
         ptr_ = otherPtr;
-        
+
         return *this;
     }
 

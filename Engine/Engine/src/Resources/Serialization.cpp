@@ -1,10 +1,10 @@
 #include "Resources/Serialization.h"
 
-#include "common/Logging.h"
+#include "Common/Logging.h"
 
 #include "cjson/cJSON.h"
 
-#include "platform/hs_Windows.h"
+#include "Platform/hs_Windows.h"
 
 namespace hs
 {
@@ -34,12 +34,12 @@ RESULT SerializationManager::FillObject(cJSON* json, PropertyContainer& containe
     {
         const PropertyDefinition& propDef = containerDef.props_[i];
         const cJSON* propJson = cJSON_GetObjectItemCaseSensitive(json, propDef.name_);
-        
+
         PropertyContainer::PropertyPair prop;
         prop.Idx = i;
         prop.Value.Type = propDef.type_;
-        
-        switch (propDef.type_) 
+
+        switch (propDef.type_)
         {
             case PropertyType::Int:
             {
@@ -191,10 +191,10 @@ RESULT SerializationManager::SaveConfig(const char* fileName, const PropertyCont
     //-----------------------------
     // Serialize object starts here
     const ContainerDef& containerDef = container.Def->GetLatestDef();
-    
+
     cJSON_AddStringToObject(root, "Def", containerDef.name_);
     cJSON_AddNumberToObject(root, "Version", container.Def->GetLatestVersion());
-    
+
     for (int i = 0; i < containerDef.props_.Count(); ++i)
     {
         PropertyValue prop = container.GetValue(i);
@@ -215,7 +215,7 @@ RESULT SerializationManager::SaveConfig(const char* fileName, const PropertyCont
             case PropertyType::Vec2:
             {
                 cJSON* arr = cJSON_AddArrayToObject(root, name);
-                
+
                 cJSON_AddItemToArray(arr, cJSON_CreateNumber(prop.V2.x));
                 cJSON_AddItemToArray(arr, cJSON_CreateNumber(prop.V2.y));
                 break;
@@ -223,7 +223,7 @@ RESULT SerializationManager::SaveConfig(const char* fileName, const PropertyCont
             case PropertyType::Vec3:
             {
                 cJSON* arr = cJSON_AddArrayToObject(root, name);
-                
+
                 cJSON_AddItemToArray(arr, cJSON_CreateNumber(prop.V3.x));
                 cJSON_AddItemToArray(arr, cJSON_CreateNumber(prop.V3.y));
                 cJSON_AddItemToArray(arr, cJSON_CreateNumber(prop.V3.z));

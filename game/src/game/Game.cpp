@@ -1,22 +1,22 @@
-#include "game/Game.h"
+#include "Game/Game.h"
 
-#include "game/SpriteRenderer.h"
-#include "game/DebugShapeRenderer.h"
+#include "Game/SpriteRenderer.h"
+#include "Game/DebugShapeRenderer.h"
 
-#include "render/Texture.h"
-#include "render/VertexBuffer.h"
-#include "render/ShaderManager.h"
-#include "render/Render.h"
-#include "render/hs_Image.h"
+#include "Render/Texture.h"
+#include "Render/VertexBuffer.h"
+#include "Render/ShaderManager.h"
+#include "Render/Render.h"
+#include "Render/hs_Image.h"
 
-#include "resources/ResourceManager.h"
+#include "Resources/ResourceManager.h"
 
-#include "input/Input.h"
+#include "Input/Input.h"
 
 #include "Engine.h"
 
-#include "common/Logging.h"
-#include "common/hs_Assert.h"
+#include "Common/Logging.h"
+#include "Common/hs_Assert.h"
 
 #include "imgui/imgui.h"
 

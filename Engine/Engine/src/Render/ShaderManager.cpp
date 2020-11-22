@@ -1,10 +1,10 @@
-#include "render/ShaderManager.h"
+#include "Render/ShaderManager.h"
 
-#include "render/Render.h"
-#include "common/Logging.h"
-#include "render/Shader.h"
+#include "Render/Render.h"
+#include "Common/Logging.h"
+#include "Render/Shader.h"
 
-#include "render/hs_Shaderc.h"
+#include "Render/hs_Shaderc.h"
 
 #include <cstdio>
 
@@ -160,7 +160,7 @@ RESULT ShaderManager::CompileShader(const char* file, PipelineStage type, Shader
     free(buffer);
 
     shaderc_compilation_status status = shaderc_result_get_compilation_status(result);
-    
+
     const char* msg = shaderc_result_get_error_message(result);
     auto warningCount = shaderc_result_get_num_warnings(result);
     auto errorCount = shaderc_result_get_num_errors(result);

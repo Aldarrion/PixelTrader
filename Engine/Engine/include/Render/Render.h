@@ -4,18 +4,18 @@
 
 #include "World/Camera.h"
 
-#include "render/VertexBufferEntry.h"
-#include "render/DynamicUniformBufferEntry.h"
-#include "render/VkTypes.h"
+#include "Render/VertexBufferEntry.h"
+#include "Render/DynamicUniformBufferEntry.h"
+#include "Render/VkTypes.h"
 
-#include "containers/Hash.h"
-#include "containers/Array.h"
+#include "Containers/Hash.h"
+#include "Containers/Array.h"
 
-#include "math/hs_Math.h"
+#include "Math/hs_Math.h"
 
-#include "common/Pointers.h"
-#include "common/Enums.h"
-#include "common/Types.h"
+#include "Common/Pointers.h"
+#include "Common/Enums.h"
+#include "Common/Types.h"
 
 #include "Platform/hs_Windows.h"
 

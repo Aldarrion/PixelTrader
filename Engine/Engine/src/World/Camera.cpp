@@ -1,7 +1,7 @@
 #include "World/Camera.h"
 
-#include "input/Input.h"
-#include "render/Render.h"
+#include "Input/Input.h"
+#include "Render/Render.h"
 #include "Resources/Serialization.h"
 
 namespace hs
