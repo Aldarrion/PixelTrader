@@ -759,7 +759,7 @@ void Game::Update()
                     bool shouldRemove = false;
 
                     EcsWorld::Iter<const Entity_t, Position, TargetCollider>(world_.Get()).Each(
-                        [this, &shouldRemove, &toRemove, &toCreate, projPos, tipCollider = collider.collider_](Entity_t target, Position& targetPos, TargetCollider targetCollider)
+                        [this, &shouldRemove, &toRemove, &toCreate, projPos, &tipCollider = collider.collider_](Entity_t target, Position& targetPos, TargetCollider targetCollider)
                         {
                             Vec2 tgtPos = targetPos.XY() + targetCollider.collider_.center_;
                             if (IsIntersecting(Circle(projPos, tipCollider.radius_), Circle(tgtPos, targetCollider.collider_.radius_)))
