@@ -66,6 +66,13 @@ struct TargetCollider
 };
 
 //------------------------------------------------------------------------------
+struct TargetRespawnTimer
+{
+    Vec3 position_;
+    float timeLeft_;
+};
+
+//------------------------------------------------------------------------------
 struct AnimationState
 {
     RESULT Init(const Array<AnimationSegment>& segments);
@@ -105,6 +112,7 @@ void Game::InitEcs()
     INIT_COMPONENT(AnimationState);
     INIT_COMPONENT(ColliderTag);
     INIT_COMPONENT(CharacterTag);
+    INIT_COMPONENT(TargetRespawnTimer);
 
     #undef INIT_COMPONENT
 
@@ -361,6 +369,9 @@ void Game::InitCamera()
 }
 
 //------------------------------------------------------------------------------
+constexpr float TARGET_COOLDOWN = 3.0f;
+
+//------------------------------------------------------------------------------
 RESULT Game::Init()
 {
     InitEcs();
@@ -481,6 +492,11 @@ RESULT Game::Init()
     Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.5) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, 9));
     world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
 
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 5, 2.5f), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 5, 2.5f), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 7, 2.5f), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 7, 2.5f), TARGET_COOLDOWN });
+
     return R_OK;
 }
 
@@ -510,10 +526,6 @@ constexpr float SHOOT_COOLDOWN = 0.5f;
 float timeToShoot{};
 float projectileGravity = gravity / 10;
 float projectileSpeed = 150.0f;
-
-//------------------------------------------------------------------------------
-//constexpr float TARGET_COOLDOWN = 3.0f;
-float targetTimeToSpawn{};
 
 //------------------------------------------------------------------------------
 static Vec2 ClosestNormal(const Box2D& a, const Box2D& b)
@@ -715,8 +727,9 @@ void Game::Update()
 
         // Move projectiles
         {
+            Array<Entity_t> projectilesToRemove;
             EcsWorld::Iter<const Entity_t, Position, Velocity, Rotation>(world_.Get()).Each(
-                [this](Entity_t eid, Position& position, Velocity& velocity, Rotation& rotation)
+                [this, &projectilesToRemove](Entity_t eid, Position& position, Velocity& velocity, Rotation& rotation)
                 {
                     velocity.y += projectileGravity * g_Engine->GetDTime();
                     position.AddXY(velocity * g_Engine->GetDTime());
@@ -726,43 +739,68 @@ void Game::Update()
                     ImGui::Text("Projectile velocity: [%.2f, %.2f]", velocity.x, velocity.y);
 
                     if (position.y < -1000)
-                        RemoveProjectile(eid);
+                        projectilesToRemove.Add(eid);
                 }
             );
+
+            for (int i = 0; i < projectilesToRemove.Count(); ++i)
+                RemoveProjectile(projectilesToRemove[i]);
         }
 
         // Collide projectiles
         {
-            EcsWorld::Iter<Position, Velocity, Rotation>(world_.Get()).Each(
-                [](Position&, Velocity&, Rotation&)
+            Array<Entity_t> toRemove;
+            Array<TargetRespawnTimer> toCreate;
+            EcsWorld::Iter<const Entity_t, Position, Rotation, TipCollider, SpriteComponent>(world_.Get()).Each(
+                [this, &toRemove, &toCreate](Entity_t projectile, Position& position, Rotation& rotation, TipCollider& collider, SpriteComponent& sprite)
                 {
-                    // TODO
-                    //Mat44 projectileTransform = MakeTransform(projectiles_.Positions[i], projectiles_.Rotations[i], projectiles_.Sprites[i]->pivot_);
-                    //Vec2 projPos = projectileTransform.TransformPos(projectiles_.TipColliders[i].center_);
-                    //
-                    //for (int j = 0; j < targets_.Positions.Count(); ++j)
-                    //{
-                    //    Vec2 tgtPos = targets_.Positions[j].XY() + targets_.Colliders[j].center_;
-                    //    if (IsIntersecting(Circle(projPos, projectiles_.TipColliders[i].radius_), Circle(tgtPos, targets_.Colliders[j].radius_)))
-                    //    {
-                    //        //RemoveProjectile(i); // TODO
-                    //        //RemoveTarget(j); // TODO
-                    //        targetTimeToSpawn = TARGET_COOLDOWN;
-                    //        break;
-                    //    }
-                    //}
+                    Mat44 projectileTransform = MakeTransform(position, rotation.angle_, sprite.sprite_->pivot_);
+                    Vec2 projPos = projectileTransform.TransformPos(collider.collider_.center_);
+                    bool shouldRemove = false;
+
+                    EcsWorld::Iter<const Entity_t, Position, TargetCollider>(world_.Get()).Each(
+                        [this, &shouldRemove, &toRemove, &toCreate, projPos, tipCollider = collider.collider_](Entity_t target, Position& targetPos, TargetCollider targetCollider)
+                        {
+                            Vec2 tgtPos = targetPos.XY() + targetCollider.collider_.center_;
+                            if (IsIntersecting(Circle(projPos, tipCollider.radius_), Circle(tgtPos, targetCollider.collider_.radius_)))
+                            {
+                                shouldRemove = true;
+                                toRemove.Add(target);
+                                toCreate.Add(TargetRespawnTimer{ targetPos, TARGET_COOLDOWN });
+                            }
+                        }
+                    );
+
+                    if (shouldRemove)
+                        toRemove.Add(projectile);
                 }
             );
+
+            for (int i = 0; i < toRemove.Count(); ++i)
+                world_->DeleteEntity(toRemove[i]);
+
+            for (int i = 0; i < toCreate.Count(); ++i)
+                world_->CreateEntity(toCreate[i]);
         }
     }
 
     // Spawn target
     {
-        //targetTimeToSpawn -= GetDTime();
-        //if (targets_.Positions.IsEmpty() && targetTimeToSpawn <= 0)
-        //{
-        //    AddTarget(TilePos(5, 5, 2.5f), &targetSprite_, Circle(targetSprite_.size_ / 2.0f, 8));
-        //}
+        Array<Entity_t> timersToRemove;
+        EcsWorld::Iter<const Entity_t, TargetRespawnTimer>(world_.Get()).Each(
+            [this, dTime = GetDTime(), &timersToRemove](Entity_t eid, TargetRespawnTimer& timer)
+            {
+                timer.timeLeft_ -= dTime;
+                if (timer.timeLeft_ <= 0)
+                {
+                    timersToRemove.Add(eid);
+                    world_->CreateEntity(Position{ timer.position_ }, SpriteComponent{ &targetSprite_ }, TargetCollider{ Circle(targetSprite_.size_ / 2.0f, 8) });
+                }
+            }
+        );
+
+        for (int i = 0; i < timersToRemove.Count(); ++i)
+            world_->DeleteEntity(timersToRemove[i]);
     }
 
     AnimateSprites();
