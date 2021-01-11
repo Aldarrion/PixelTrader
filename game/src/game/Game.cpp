@@ -361,7 +361,7 @@ void Game::InitCamera()
 }
 
 //------------------------------------------------------------------------------
-RESULT Game::InitWin32()
+RESULT Game::Init()
 {
     InitEcs();
     InitCamera();
@@ -414,7 +414,7 @@ RESULT Game::InitWin32()
 
     //
     Array<AnimationSegment> rockIdleSegments;
-    for (uint i = 0; i < hs_arr_len(rockSprite_); ++i)
+    for (uint i = 0; i < HS_ARR_LEN(rockSprite_); ++i)
         rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
 
     AnimationState rockIdle{};
@@ -424,7 +424,7 @@ RESULT Game::InitWin32()
     // ------------------------
     // Create initial map state
     Array<AnimationSegment> pumpkinIdleSegments;
-    for (uint i = 0; i < hs_arr_len(pumpkinSprite_); ++i)
+    for (uint i = 0; i < HS_ARR_LEN(pumpkinSprite_); ++i)
         pumpkinIdleSegments.Add(AnimationSegment{ &pumpkinSprite_[i], 0.5f });
 
     AnimationState pumpkinIdle{};
@@ -670,7 +670,7 @@ void Game::Update()
 
         Camera& cam = g_Render->GetCamera();
         cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
-        cam.UpdateMatrics();
+        cam.UpdateMatrices();
 
         static Vec2 maxPlayerVelocity(Vec2::ZERO());
         static Vec2 minPlayerVelocity(Vec2::ZERO());

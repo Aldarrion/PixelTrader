@@ -38,7 +38,7 @@ class Game : public GameBase
 public:
     ~Game();
 
-    RESULT InitWin32();
+    RESULT Init();
     RESULT OnWindowResized();
     void Update();
 
