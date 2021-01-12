@@ -596,7 +596,7 @@ static float RotationFromDirection(Vec2 dirNormalized)
 void Game::Update()
 {
     // Debug
-    if (g_Input->IsKeyDown('C'))
+    if (g_Input->IsKeyDown(KC_C))
     {
         visualizeColliders_ = !visualizeColliders_;
     }
@@ -604,7 +604,7 @@ void Game::Update()
     // Movement
     float focusMultiplier = 1.0f;
     {
-        if (g_Input->GetState(VK_LSHIFT))
+        if (g_Input->GetState(KC_LSHIFT))
         {
             focusMultiplier = 0.25f;
         }
@@ -614,16 +614,16 @@ void Game::Update()
         velocity.x = 0;
 
         float characterSpeed{ 80 };
-        if (isGrounded && g_Input->IsKeyDown(VK_SPACE))
+        if (isGrounded && g_Input->IsKeyDown(KC_SPACE))
         {
             velocity.y = jumpVelocity;
         }
 
-        if (g_Input->GetState('D'))
+        if (g_Input->GetState(KC_D))
         {
             velocity.x += characterSpeed;
         }
-        else if (g_Input->GetState('A'))
+        else if (g_Input->GetState(KC_A))
         {
             velocity.x -= characterSpeed;
         }
