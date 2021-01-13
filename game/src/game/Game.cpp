@@ -604,7 +604,7 @@ void Game::Update()
     // Movement
     float focusMultiplier = 1.0f;
     {
-        if (g_Input->GetState(KC_LSHIFT))
+        if (g_Input->GetState(KC_LSHIFT) || g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5)
         {
             focusMultiplier = 0.25f;
         }
@@ -614,7 +614,7 @@ void Game::Update()
         velocity.x = 0;
 
         float characterSpeed{ 80 };
-        if (isGrounded && g_Input->IsKeyDown(KC_SPACE))
+        if (isGrounded && (g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(GLFW_JOYSTICK_1, GLFW_GAMEPAD_BUTTON_A)))
         {
             velocity.y = jumpVelocity;
         }
@@ -626,6 +626,12 @@ void Game::Update()
         else if (g_Input->GetState(KC_A))
         {
             velocity.x -= characterSpeed;
+        }
+
+        const float xAxis = g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_LEFT_X);
+        if (xAxis)
+        {
+            velocity.x += characterSpeed * xAxis;
         }
 
         Vec3& pos = world_->GetComponent<Position>(character_);
@@ -703,26 +709,48 @@ void Game::Update()
         ImGui::End();
 
         timeToShoot = Max(timeToShoot - GetDTime(), 0.0f);
-        if (g_Input->IsButtonDown(BTN_LEFT) && timeToShoot <= 0)
+        if (timeToShoot <= 0)
         {
-            timeToShoot = SHOOT_COOLDOWN;
+            const Vec2 projPos = world_->GetComponent<Position>(character_).XY() + world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2;
+            Vec2 dir;
+            bool shouldShoot = false;
 
-            Vec2 to = CursorToWorld();
-            Vec2 projPos = world_->GetComponent<Position>(character_).XY() + world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2;
-            Vec2 dir(to - projPos);
-            dir.Normalize();
+            if (g_Input->IsButtonDown(BTN_LEFT))
+            {
+                shouldShoot = true;
+                Vec2 to = CursorToWorld();
+                dir = (to - projPos);
+            }
+            else if (g_Input->IsButtonDown(GLFW_JOYSTICK_1, GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER))
+            {
+                shouldShoot = true;
+                dir.x = g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_RIGHT_X);
+                dir.y = -g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_RIGHT_Y);
 
-            float angle = RotationFromDirection(dir);
+                if (dir.LengthSqr() == 0)
+                    dir.x = world_->GetComponent<Velocity>(character_).x;
+                
+                if (dir.LengthSqr() == 0)
+                    dir.x = 1;
+            }
 
-            constexpr float PLAYER_VELOCITY_WEIGHT = 0.7f;
-            Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(character_) * PLAYER_VELOCITY_WEIGHT * focusMultiplier;
-            AddProjectile(
-                Vec3(projPos.x, projPos.y, 0.5f),
-                angle,
-                &arrowSprite_,
-                Circle(Vec2(7, 2.5f), 2.5f),
-                projectileVelocity
-            );
+            if (shouldShoot)
+            {
+                timeToShoot = SHOOT_COOLDOWN;
+                dir.Normalize();
+
+                float angle = RotationFromDirection(dir);
+
+                constexpr float PLAYER_VELOCITY_WEIGHT = 0.7f;
+                Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(character_) * PLAYER_VELOCITY_WEIGHT * focusMultiplier;
+                AddProjectile(
+                    Vec3(projPos.x, projPos.y, 0.5f),
+                    angle,
+                    &arrowSprite_,
+                    Circle(Vec2(7, 2.5f), 2.5f),
+                    projectileVelocity
+                );
+            }
         }
 
         // Move projectiles
