@@ -56,6 +56,8 @@ private:
         BOT_RIGHT,
     };
 
+    static constexpr uint MAX_PLAYERS{ 2 };
+
     UniquePtr<EcsWorld> world_;
 
     Sprite groundSprite_[3 * 3]{};
@@ -67,7 +69,9 @@ private:
     Sprite arrowSprite_{};
     Sprite targetSprite_{};
 
-    Entity_t character_{};
+    int playerCount_{ 1 };
+    Entity_t players_[MAX_PLAYERS]{};
+    int gamepadForPlayer_[MAX_PLAYERS]{};
 
     // Debug
     bool visualizeColliders_{};

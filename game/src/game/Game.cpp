@@ -487,7 +487,7 @@ RESULT Game::Init()
     AddSprite(TilePos(left + width + 1, y), &groundSprite_[BOT_RIGHT]);
 
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
-    character_ = AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
+    players_[0] = AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
 
     Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.5) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, 9));
     world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
@@ -601,20 +601,40 @@ void Game::Update()
         visualizeColliders_ = !visualizeColliders_;
     }
 
-    // Movement
-    float focusMultiplier = 1.0f;
-    {
-        if (g_Input->GetState(KC_LSHIFT) || g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5)
+    // Player menu
+    ImGui::Begin("Players");
+        ImGui::InputInt("Player count", &playerCount_);
+        playerCount_ = Clamp((uint)playerCount_, 0u, MAX_PLAYERS);
+        for (int playerI = 0; playerI < playerCount_; ++playerI)
         {
-            focusMultiplier = 0.25f;
+            ImGui::Text("Player %d input", playerI);
+            for (int gamepadI = 0; gamepadI < GLFW_JOYSTICK_LAST; ++gamepadI)
+            {
+                if (g_Input->IsGamepadConnected(gamepadI))
+                {
+                    char buff[128];
+                    sprintf(buff, "Gamepad %d", gamepadI);
+                    ImGui::RadioButton(buff, &gamepadForPlayer_[playerI], gamepadI);
+                }
+            }
         }
+    ImGui::End();
 
-        Vec2& velocity = world_->GetComponent<Velocity>(character_);
-        velocity.y += gravity * g_Engine->GetDTime() * focusMultiplier;
+    // Movement
+    float focusMultiplier[MAX_PLAYERS]{};
+    for (int playerI = 0; playerI < playerCount_; ++playerI)
+    {
+        if (g_Input->GetState(KC_LSHIFT) || g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5)
+            focusMultiplier[playerI] = 0.25f;
+        else
+            focusMultiplier[playerI] = 1.0;
+
+        Vec2& velocity = world_->GetComponent<Velocity>(players_[playerI]);
+        velocity.y += gravity * g_Engine->GetDTime() * focusMultiplier[playerI];
         velocity.x = 0;
 
         float characterSpeed{ 80 };
-        if (isGrounded && (g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(GLFW_JOYSTICK_1, GLFW_GAMEPAD_BUTTON_A)))
+        if (isGrounded && (g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
         {
             velocity.y = jumpVelocity;
         }
@@ -628,20 +648,20 @@ void Game::Update()
             velocity.x -= characterSpeed;
         }
 
-        const float xAxis = g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_LEFT_X);
+        const float xAxis = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_X);
         if (xAxis)
         {
             velocity.x += characterSpeed * xAxis;
         }
 
-        Vec3& pos = world_->GetComponent<Position>(character_);
+        Vec3& pos = world_->GetComponent<Position>(players_[playerI]);
 
         isGrounded = false;
 
-        Vec2 dtVel = velocity * g_Engine->GetDTime() * focusMultiplier;
+        Vec2 dtVel = velocity * g_Engine->GetDTime() * focusMultiplier[playerI];
 
         Vec2 pos2 = pos.XY();
-        const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(character_);
+        const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(players_[playerI]);
         Box2D playerCollider = originalCollider.collider_.Offset(pos.XY());
 
         auto SolveIntersection = [pos2, &dtVel, &originalCollider, &playerCollider](const Box2D& groundCollider)
@@ -687,7 +707,7 @@ void Game::Update()
         pos.y += dtVel.y;
 
         Camera& cam = g_Render->GetCamera();
-        cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
+        cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
         cam.UpdateMatrices();
 
         static Vec2 maxPlayerVelocity(Vec2::ZERO());
@@ -697,21 +717,23 @@ void Game::Update()
         minPlayerVelocity.x = Min(minPlayerVelocity.x, velocity.x);
         minPlayerVelocity.y = Min(minPlayerVelocity.y, velocity.y);
 
-        ImGui::Text("Cur player velocity: [%.2f, %.2f]", velocity.x, velocity.y);
-        ImGui::Text("Max player velocity: [%.2f, %.2f]", maxPlayerVelocity.x, maxPlayerVelocity.y);
-        ImGui::Text("Min player velocity: [%.2f, %.2f]", minPlayerVelocity.x, minPlayerVelocity.y);
+        ImGui::Text("Cur player %d velocity: [%.2f, %.2f]", playerI, velocity.x, velocity.y);
+        ImGui::Text("Max player %d velocity: [%.2f, %.2f]", playerI, maxPlayerVelocity.x, maxPlayerVelocity.y);
+        ImGui::Text("Min player %d velocity: [%.2f, %.2f]", playerI, minPlayerVelocity.x, minPlayerVelocity.y);
     }
 
     // Shooting
+    ImGui::Begin("Settings");
+        ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
+    ImGui::End();
+
+    for (int playerI = 0; playerI < playerCount_; ++playerI)
     {
-        ImGui::Begin("Settings");
-            ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
-        ImGui::End();
 
         timeToShoot = Max(timeToShoot - GetDTime(), 0.0f);
         if (timeToShoot <= 0)
         {
-            const Vec2 projPos = world_->GetComponent<Position>(character_).XY() + world_->GetComponent<SpriteComponent>(character_).sprite_->size_ / 2;
+            const Vec2 projPos = world_->GetComponent<Position>(players_[playerI]).XY() + world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2;
             Vec2 dir;
             bool shouldShoot = false;
 
@@ -721,14 +743,14 @@ void Game::Update()
                 Vec2 to = CursorToWorld();
                 dir = (to - projPos);
             }
-            else if (g_Input->IsButtonDown(GLFW_JOYSTICK_1, GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER))
+            else if (g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER))
             {
                 shouldShoot = true;
-                dir.x = g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_RIGHT_X);
-                dir.y = -g_Input->GetAxis(GLFW_JOYSTICK_1, GLFW_GAMEPAD_AXIS_RIGHT_Y);
+                dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
+                dir.y = -g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_Y);
 
                 if (dir.LengthSqr() == 0)
-                    dir.x = world_->GetComponent<Velocity>(character_).x;
+                    dir.x = world_->GetComponent<Velocity>(players_[playerI]).x;
                 
                 if (dir.LengthSqr() == 0)
                     dir.x = 1;
@@ -742,7 +764,7 @@ void Game::Update()
                 float angle = RotationFromDirection(dir);
 
                 constexpr float PLAYER_VELOCITY_WEIGHT = 0.7f;
-                Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(character_) * PLAYER_VELOCITY_WEIGHT * focusMultiplier;
+                Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(players_[playerI]) * PLAYER_VELOCITY_WEIGHT * focusMultiplier[playerI];
                 AddProjectile(
                     Vec3(projPos.x, projPos.y, 0.5f),
                     angle,
