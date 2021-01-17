@@ -218,6 +218,52 @@ Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, co
 }
 
 //------------------------------------------------------------------------------
+Entity_t Game::SpawnPlayer()
+{
+    Array<AnimationSegment> rockIdleSegments;
+    for (uint i = 0; i < HS_ARR_LEN(rockSprite_); ++i)
+        rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
+
+    AnimationState rockIdle{};
+    if (HS_FAILED(rockIdle.Init(rockIdleSegments)))
+    {
+        hs_assert(false);
+        return 0;
+    }
+
+    Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
+
+    // Assign gamepad
+    for (int gamepadI = 0; gamepadI < GLFW_JOYSTICK_LAST; ++gamepadI)
+    {
+        bool gamepadOk = true;
+        if (g_Input->IsGamepadConnected(gamepadI))
+        {
+            for (int playerI = 0; playerI < playerCount_; ++playerI)
+            {
+                if (gamepadForPlayer_[playerI] == gamepadI)
+                    gamepadOk = false;
+            }
+        }
+        else
+        {
+            gamepadOk = false;
+        }
+
+        if (gamepadOk)
+        {
+            gamepadForPlayer_[playerCount_] = gamepadI;
+            break;
+        }
+    }
+
+    players_[playerCount_] = AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
+    ++playerCount_;
+
+    return players_[playerCount_ - 1];
+}
+
+//------------------------------------------------------------------------------
 void Game::AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity)
 {
     world_->CreateEntity(
@@ -423,15 +469,6 @@ RESULT Game::Init()
     if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_, Vec2::ZERO())))
         return R_FAIL;
 
-    //
-    Array<AnimationSegment> rockIdleSegments;
-    for (uint i = 0; i < HS_ARR_LEN(rockSprite_); ++i)
-        rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
-
-    AnimationState rockIdle{};
-    if (HS_FAILED(rockIdle.Init(rockIdleSegments)))
-        return R_FAIL;
-
     // ------------------------
     // Create initial map state
     Array<AnimationSegment> pumpkinIdleSegments;
@@ -486,8 +523,7 @@ RESULT Game::Init()
         AddSprite(TilePos(left + 1 + i, y), &groundSprite_[BOT]);
     AddSprite(TilePos(left + width + 1, y), &groundSprite_[BOT_RIGHT]);
 
-    Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
-    players_[0] = AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
+    SpawnPlayer();
 
     Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.5) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, 9));
     world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
@@ -496,6 +532,10 @@ RESULT Game::Init()
     world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 5, 2.5f), TARGET_COOLDOWN });
     world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 7, 2.5f), TARGET_COOLDOWN });
     world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 7, 2.5f), TARGET_COOLDOWN });
+
+    Camera& cam = g_Render->GetCamera();
+    cam.SetPosition(Vec2{ 0, 6.5f * TILE_SIZE });
+    cam.UpdateMatrices();
 
     return R_OK;
 }
@@ -514,17 +554,14 @@ RESULT Game::OnWindowResized()
 }
 
 //------------------------------------------------------------------------------
-bool isGrounded = false;
-float height = 32;
-float timeToJump = 0.3f;
-float jumpVelocity = (2 * height) / (timeToJump);
-float gravity = (-2 * height) / Sqr(timeToJump);
-float groundLevel = 8;
+static constexpr float height = 32;
+static constexpr float timeToJump = 0.3f;
+static constexpr float jumpVelocity = (2 * height) / (timeToJump);
+static constexpr float gravity = (-2 * height) / Sqr(timeToJump);
+static constexpr float groundLevel = 8;
 
 //------------------------------------------------------------------------------
-constexpr float SHOOT_COOLDOWN = 0.5f;
-float timeToShoot{};
-float projectileGravity = gravity / 10;
+static constexpr float projectileGravity = gravity / 10;
 float projectileSpeed = 150.0f;
 
 //------------------------------------------------------------------------------
@@ -602,9 +639,11 @@ void Game::Update()
     }
 
     // Player menu
+    int newPlayerCount = playerCount_;
     ImGui::Begin("Players");
-        ImGui::InputInt("Player count", &playerCount_);
-        playerCount_ = Clamp((uint)playerCount_, 0u, MAX_PLAYERS);
+        ImGui::InputInt("Player count", &newPlayerCount);
+        newPlayerCount = Clamp((uint)newPlayerCount, 1u, MAX_PLAYERS);
+        
         for (int playerI = 0; playerI < playerCount_; ++playerI)
         {
             ImGui::Text("Player %d input", playerI);
@@ -613,11 +652,20 @@ void Game::Update()
                 if (g_Input->IsGamepadConnected(gamepadI))
                 {
                     char buff[128];
-                    sprintf(buff, "Gamepad %d", gamepadI);
+                    sprintf(buff, "P%d Gamepad %d", playerI, gamepadI);
                     ImGui::RadioButton(buff, &gamepadForPlayer_[playerI], gamepadI);
                 }
             }
         }
+    ImGui::End();
+
+    while (playerCount_ < newPlayerCount)
+    {
+        SpawnPlayer();
+    }
+
+    ImGui::Begin("Settings");
+        ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
     ImGui::End();
 
     // Movement
@@ -634,7 +682,7 @@ void Game::Update()
         velocity.x = 0;
 
         float characterSpeed{ 80 };
-        if (isGrounded && (g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
+        if (isGrounded_[playerI] && (g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
         {
             velocity.y = jumpVelocity;
         }
@@ -656,7 +704,7 @@ void Game::Update()
 
         Vec3& pos = world_->GetComponent<Position>(players_[playerI]);
 
-        isGrounded = false;
+        isGrounded_[playerI] = false;
 
         Vec2 dtVel = velocity * g_Engine->GetDTime() * focusMultiplier[playerI];
 
@@ -664,7 +712,7 @@ void Game::Update()
         const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(players_[playerI]);
         Box2D playerCollider = originalCollider.collider_.Offset(pos.XY());
 
-        auto SolveIntersection = [pos2, &dtVel, &originalCollider, &playerCollider](const Box2D& groundCollider)
+        auto SolveIntersection = [this, pos2, &dtVel, &originalCollider, &playerCollider](const Box2D& groundCollider, int playerI)
         {
             IntersectionResult intersection = IsIntersecting(groundCollider, playerCollider, dtVel);
             if (intersection.isIntersecting_)
@@ -684,21 +732,21 @@ void Game::Update()
                     dtVel -= (1 - (intersection.tFirst_ - 0.0001f)) * dir;
                     if (closeNormal == Vec2::UP())
                     {
-                        isGrounded = true;
+                        isGrounded_[playerI] = true;
                     }
                 }
             }
         };
 
         EcsWorld::Iter<const ColliderComponent, const Position>(world_.Get()).EachExcept<CharacterTag>(
-            [SolveIntersection]
+            [SolveIntersection, playerI]
             (const ColliderComponent& collider, const Position& pos)
             {
-                SolveIntersection(collider.collider_.Offset(pos.XY()));
+                SolveIntersection(collider.collider_.Offset(pos.XY()), playerI);
             }
         );
 
-        if (isGrounded)
+        if (isGrounded_[playerI])
         {
             velocity.y = 0;
         }
@@ -706,9 +754,9 @@ void Game::Update()
         pos.x += dtVel.x;
         pos.y += dtVel.y;
 
-        Camera& cam = g_Render->GetCamera();
-        cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
-        cam.UpdateMatrices();
+        //Camera& cam = g_Render->GetCamera();
+        //cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
+        //cam.UpdateMatrices();
 
         static Vec2 maxPlayerVelocity(Vec2::ZERO());
         static Vec2 minPlayerVelocity(Vec2::ZERO());
@@ -720,18 +768,10 @@ void Game::Update()
         ImGui::Text("Cur player %d velocity: [%.2f, %.2f]", playerI, velocity.x, velocity.y);
         ImGui::Text("Max player %d velocity: [%.2f, %.2f]", playerI, maxPlayerVelocity.x, maxPlayerVelocity.y);
         ImGui::Text("Min player %d velocity: [%.2f, %.2f]", playerI, minPlayerVelocity.x, minPlayerVelocity.y);
-    }
 
-    // Shooting
-    ImGui::Begin("Settings");
-        ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
-    ImGui::End();
-
-    for (int playerI = 0; playerI < playerCount_; ++playerI)
-    {
-
-        timeToShoot = Max(timeToShoot - GetDTime(), 0.0f);
-        if (timeToShoot <= 0)
+        // Shooting
+        timeToShoot_[playerI] = Max(timeToShoot_[playerI] - GetDTime(), 0.0f);
+        if (timeToShoot_[playerI] <= 0)
         {
             const Vec2 projPos = world_->GetComponent<Position>(players_[playerI]).XY() + world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2;
             Vec2 dir;
@@ -751,14 +791,14 @@ void Game::Update()
 
                 if (dir.LengthSqr() == 0)
                     dir.x = world_->GetComponent<Velocity>(players_[playerI]).x;
-                
+
                 if (dir.LengthSqr() == 0)
                     dir.x = 1;
             }
 
             if (shouldShoot)
             {
-                timeToShoot = SHOOT_COOLDOWN;
+                timeToShoot_[playerI] = SHOOT_COOLDOWN;
                 dir.Normalize();
 
                 float angle = RotationFromDirection(dir);
@@ -774,7 +814,9 @@ void Game::Update()
                 );
             }
         }
+    }
 
+    {
         // Move projectiles
         {
             Array<Entity_t> projectilesToRemove;
@@ -815,14 +857,14 @@ void Game::Update()
                             if (IsIntersecting(Circle(projPos, tipCollider.radius_), Circle(tgtPos, targetCollider.collider_.radius_)))
                             {
                                 shouldRemove = true;
-                                toRemove.Add(target);
+                                toRemove.AddUnique(target);
                                 toCreate.Add(TargetRespawnTimer{ targetPos, TARGET_COOLDOWN });
                             }
                         }
                     );
 
                     if (shouldRemove)
-                        toRemove.Add(projectile);
+                        toRemove.AddUnique(projectile);
                 }
             );
 

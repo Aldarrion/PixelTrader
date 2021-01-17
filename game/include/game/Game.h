@@ -56,7 +56,8 @@ private:
         BOT_RIGHT,
     };
 
-    static constexpr uint MAX_PLAYERS{ 2 };
+    static constexpr uint   MAX_PLAYERS{ 2 };
+    static constexpr float  SHOOT_COOLDOWN{ 0.5f };
 
     UniquePtr<EcsWorld> world_;
 
@@ -69,9 +70,12 @@ private:
     Sprite arrowSprite_{};
     Sprite targetSprite_{};
 
-    int playerCount_{ 1 };
-    Entity_t players_[MAX_PLAYERS]{};
-    int gamepadForPlayer_[MAX_PLAYERS]{};
+    int         playerCount_{ 0 };
+    Entity_t    players_[MAX_PLAYERS]{};
+
+    int         gamepadForPlayer_[MAX_PLAYERS]{};
+    float       timeToShoot_[MAX_PLAYERS]{};
+    bool        isGrounded_[MAX_PLAYERS]{};
 
     // Debug
     bool visualizeColliders_{};
@@ -84,6 +88,7 @@ private:
     void AddSprite(const Vec3& pos, Sprite* sprite);
     void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);
     Entity_t AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
+    Entity_t SpawnPlayer();
 
     void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
     void RemoveProjectile(uint idx);

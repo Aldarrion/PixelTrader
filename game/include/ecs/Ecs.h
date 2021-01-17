@@ -500,7 +500,7 @@ public:
     void DeleteEntity(Entity_t entity)
     {
         EntityDeleteOperation deleteOp(this, entity);
-        if (IsIterating())
+        if (!IsIterating())
         {
             deleteOp.Execute();
         }
