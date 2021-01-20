@@ -68,6 +68,12 @@ struct TargetCollider
 };
 
 //------------------------------------------------------------------------------
+struct Projectile
+{
+    int shooterId_;
+};
+
+//------------------------------------------------------------------------------
 struct TargetRespawnTimer
 {
     Vec3 position_;
@@ -94,8 +100,9 @@ enum class ColliderTag
 };
 
 //------------------------------------------------------------------------------
-struct CharacterTag
+struct PlayerComponent
 {
+    int playerId_;
 };
 
 //------------------------------------------------------------------------------
@@ -123,10 +130,11 @@ void Game::InitEcs()
     INIT_COMPONENT(TargetCollider);
     INIT_COMPONENT(AnimationState);
     INIT_COMPONENT(ColliderTag);
-    INIT_COMPONENT(CharacterTag);
+    INIT_COMPONENT(PlayerComponent);
     INIT_COMPONENT(TargetRespawnTimer);
     INIT_COMPONENT(SpawnPoint);
     INIT_COMPONENT(PlayerRespawnTimer);
+    INIT_COMPONENT(Projectile);
 
     #undef INIT_COMPONENT
 
@@ -218,7 +226,7 @@ void Game::AddObject(const Vec3& pos, const AnimationState& animation, const Box
 }
 
 //------------------------------------------------------------------------------
-Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider)
+Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider, int playerId)
 {
     auto eid = world_->CreateEntity(
         Position{ pos },
@@ -226,7 +234,7 @@ Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, co
         animation,
         ColliderComponent{ collider },
         SpriteComponent{ animation.GetCurrentSprite() },
-        CharacterTag{}
+        PlayerComponent{ playerId }
     );
     return eid;
 }
@@ -282,21 +290,22 @@ Entity_t Game::SpawnPlayer()
     const auto spawnIdx = (uint)((rand() * 1.0f / RAND_MAX) * spawnPositions.Count());
     const Vec3 spawnPos = spawnPositions[spawnIdx];
 
-    players_[playerCount_] = AddCharacter(spawnPos, rockIdle, rockCollider);
+    players_[playerCount_] = AddCharacter(spawnPos, rockIdle, rockCollider, playerCount_);
     ++playerCount_;
 
     return players_[playerCount_ - 1];
 }
 
 //------------------------------------------------------------------------------
-void Game::AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity)
+void Game::AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& collider, Vec2 velocity, int playerId)
 {
     world_->CreateEntity(
         Position{ pos },
         Rotation{ rotation },
         SpriteComponent{ sprite },
         TipCollider{ collider },
-        Velocity{ velocity }
+        Velocity{ velocity },
+        Projectile{ playerId }
     );
 }
 
@@ -760,7 +769,7 @@ void Game::Update()
             }
         };
 
-        EcsWorld::Iter<const ColliderComponent, const Position>(world_.Get()).EachExcept<CharacterTag>(
+        EcsWorld::Iter<const ColliderComponent, const Position>(world_.Get()).EachExcept<PlayerComponent>(
             [SolveIntersection, playerI]
             (const ColliderComponent& collider, const Position& pos)
             {
@@ -832,7 +841,8 @@ void Game::Update()
                     angle,
                     &arrowSprite_,
                     Circle(Vec2(7, 2.5f), 2.5f),
-                    projectileVelocity
+                    projectileVelocity,
+                    playerI
                 );
             }
         }

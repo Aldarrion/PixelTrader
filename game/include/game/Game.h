@@ -88,10 +88,10 @@ private:
 
     void AddSprite(const Vec3& pos, Sprite* sprite);
     void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);
-    Entity_t AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider);
+    Entity_t AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider, int playerId);
     Entity_t SpawnPlayer();
 
-    void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity);
+    void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity, int playerId);
     void RemoveProjectile(uint idx);
 
     void AddTarget(const Vec3& pos, Sprite* sprite, const Circle& collider);
