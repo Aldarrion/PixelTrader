@@ -58,6 +58,7 @@ private:
 
     static constexpr uint   MAX_PLAYERS{ 2 };
     static constexpr float  SHOOT_COOLDOWN{ 0.5f };
+    static constexpr float  TARGET_COOLDOWN{ 3.0f };
 
     UniquePtr<EcsWorld> world_;
 
@@ -96,9 +97,10 @@ private:
     void AddTarget(const Vec3& pos, Sprite* sprite, const Circle& collider);
     void RemoveTarget(uint idx);
 
-
     void AnimateSprites();
     void DrawColliders();
+
+    RESULT LoadMap();
 };
 
 }

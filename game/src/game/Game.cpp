@@ -20,6 +20,8 @@
 
 #include "imgui/imgui.h"
 
+#include <cstdio>
+
 namespace hs
 {
 
@@ -97,6 +99,16 @@ struct CharacterTag
 };
 
 //------------------------------------------------------------------------------
+struct SpawnPoint
+{
+};
+
+//------------------------------------------------------------------------------
+struct PlayerRespawnTimer
+{
+};
+
+//------------------------------------------------------------------------------
 void Game::InitEcs()
 {
     #define INIT_COMPONENT(type) TypeInfo<type>::InitTypeId()
@@ -113,6 +125,8 @@ void Game::InitEcs()
     INIT_COMPONENT(ColliderTag);
     INIT_COMPONENT(CharacterTag);
     INIT_COMPONENT(TargetRespawnTimer);
+    INIT_COMPONENT(SpawnPoint);
+    INIT_COMPONENT(PlayerRespawnTimer);
 
     #undef INIT_COMPONENT
 
@@ -257,7 +271,18 @@ Entity_t Game::SpawnPlayer()
         }
     }
 
-    players_[playerCount_] = AddCharacter(Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1), rockIdle, rockCollider);
+    Array<Vec3> spawnPositions;
+    EcsWorld::Iter<const Position, const SpawnPoint>(world_.Get()).Each(
+        [&spawnPositions](const Position pos, const SpawnPoint)
+        {
+            spawnPositions.Add(pos);
+        }
+    );
+
+    const auto spawnIdx = (uint)((rand() * 1.0f / RAND_MAX) * spawnPositions.Count());
+    const Vec3 spawnPos = spawnPositions[spawnIdx];
+
+    players_[playerCount_] = AddCharacter(spawnPos, rockIdle, rockCollider);
     ++playerCount_;
 
     return players_[playerCount_ - 1];
@@ -360,14 +385,6 @@ void Game::DrawColliders()
         }
     );
 
-    EcsWorld::Iter<const ColliderComponent>(world_.Get()).Each(
-        []
-        (const ColliderComponent& collider)
-        {
-            DrawCollider(collider.collider_);
-        }
-    );
-
     EcsWorld::Iter<const Position, const Rotation, const TipCollider, const SpriteComponent>(world_.Get()).Each(
         []
         (const Position& pos, const Rotation rotation, const TipCollider& collider, const SpriteComponent sprite)
@@ -407,6 +424,71 @@ static RESULT MakeSimpleSprite(const char* texPath, Sprite& t, Vec2 pivot)
 }
 
 //------------------------------------------------------------------------------
+RESULT Game::LoadMap()
+{
+    Array<AnimationSegment> pumpkinIdleSegments;
+    for (uint i = 0; i < HS_ARR_LEN(pumpkinSprite_); ++i)
+        pumpkinIdleSegments.Add(AnimationSegment{ &pumpkinSprite_[i], 0.5f });
+    
+    AnimationState pumpkinIdle{};
+    if (HS_FAILED(pumpkinIdle.Init(pumpkinIdleSegments)))
+        return R_FAIL;
+    Box2D pumpkinCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(12, 10));
+    AddObject(Vec3(3 * TILE_SIZE, 9, 1), pumpkinIdle, &pumpkinCollider);
+    AddObject(Vec3(1 * TILE_SIZE, 1.5 * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
+
+    Array<AnimationSegment> chestIdleSegments;
+    chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
+    
+    AnimationState chestIdle{};
+    if (HS_FAILED(chestIdle.Init(chestIdleSegments)))
+        return R_FAIL;
+
+    Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
+    AddObject(TilePos(0, 0.5f, 1), chestIdle, &chestCollider);
+
+    int bot = - 1;
+    int left = -12;
+    int width = 22;
+    int height = 15;
+
+    AddSprite(TilePos(left, bot + 1), &groundSprite_[TOP_LEFT]);
+    for (int i = 0; i < width; ++i)
+        AddSprite(TilePos(left + 1 + i, bot + 1), &groundSprite_[TOP]);
+    AddSprite(TilePos(left + width + 1, bot + 1), &groundSprite_[TOP_RIGHT]);
+
+    for (int i = 0; i < height; ++i)
+        AddSprite(TilePos(left, bot + i, 0.1f), &groundSprite_[MID_RIGHT]);
+
+    for (int i = 0; i < height; ++i)
+        AddSprite(TilePos(left + width + 1, bot + i, 0.1f), &groundSprite_[MID_LEFT]);
+
+    AddSprite(TilePos(left, bot), &groundSprite_[BOT_LEFT]);
+    for (int i = 0; i < width; ++i)
+        AddSprite(TilePos(left + 1 + i, bot), &groundSprite_[BOT]);
+    AddSprite(TilePos(left + width + 1, bot), &groundSprite_[BOT_RIGHT]);
+
+    Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.25f) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 1.75f) * TILE_SIZE, 9));
+    world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+
+    Box2D leftWallCollider = MakeBox2DMinMax(Vec2((left) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + 0.75f) * TILE_SIZE, height * TILE_SIZE));
+    world_->CreateEntity(ColliderComponent{ leftWallCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+
+    Box2D rightWallCollider = MakeBox2DMinMax(Vec2((left + width + 1.25f) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, height * TILE_SIZE));
+    world_->CreateEntity(ColliderComponent{ rightWallCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 5, 2.5f), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 5, 2.5f), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 7, 2.5f), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 7, 2.5f), TARGET_COOLDOWN });
+
+    world_->CreateEntity(Position{ Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
+    world_->CreateEntity(Position{ Vec3(2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
+
+    return R_OK;
+}
+
+//------------------------------------------------------------------------------
 void Game::InitCamera()
 {
     constexpr uint PIXEL_PER_TEXEL = 5;
@@ -415,11 +497,10 @@ void Game::InitCamera()
 }
 
 //------------------------------------------------------------------------------
-constexpr float TARGET_COOLDOWN = 3.0f;
-
-//------------------------------------------------------------------------------
 RESULT Game::Init()
 {
+    //srand(42);
+
     InitEcs();
     InitCamera();
 
@@ -469,69 +550,10 @@ RESULT Game::Init()
     if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_, Vec2::ZERO())))
         return R_FAIL;
 
-    // ------------------------
-    // Create initial map state
-    Array<AnimationSegment> pumpkinIdleSegments;
-    for (uint i = 0; i < HS_ARR_LEN(pumpkinSprite_); ++i)
-        pumpkinIdleSegments.Add(AnimationSegment{ &pumpkinSprite_[i], 0.5f });
-
-    AnimationState pumpkinIdle{};
-    if (HS_FAILED(pumpkinIdle.Init(pumpkinIdleSegments)))
+    if (HS_FAILED(LoadMap()))
         return R_FAIL;
-    Box2D pumpkinCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(12, 10));
-    AddObject(Vec3(3 * TILE_SIZE, 9, 1), pumpkinIdle, &pumpkinCollider);
-    AddObject(Vec3(1 * TILE_SIZE, 1.5 * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
-
-    //
-    Array<AnimationSegment> chestIdleSegments;
-    chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
-
-    AnimationState chestIdle{};
-    if (HS_FAILED(chestIdle.Init(chestIdleSegments)))
-        return R_FAIL;
-
-    Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
-    AddObject(TilePos(0, 0.5f, 1), chestIdle, &chestCollider);
-
-    int left = -6;
-    int width = 15;
-    int height = 10;
-
-    AddSprite(Vec3(left * TILE_SIZE, 0.4f, 3), &forestSprite_);
-
-    AddSprite(TilePos(left + 2, 0.3f, 2), &forestDoorSprite_);
-
-    int y = 0;
-    AddSprite(TilePos(left, y), &groundSprite_[TOP_LEFT]);
-    for (int i = 0; i < width; ++i)
-        AddSprite(TilePos(left + 1 + i, y), &groundSprite_[TOP]);
-    AddSprite(TilePos(left + width + 1, y), &groundSprite_[TOP_RIGHT]);
-
-    int j = 0;
-    for (; j < height; j++)
-    {
-        y = -1 - j;
-        AddSprite(TilePos(left, y), &groundSprite_[MID_LEFT]);
-        for (int i = 0; i < width; ++i)
-            AddSprite(TilePos(left + 1 + i, y), &groundSprite_[MID]);
-        AddSprite(TilePos(left + width + 1, y), &groundSprite_[MID_RIGHT]);
-    }
-
-    y = -j - 1;
-    AddSprite(TilePos(left, y), &groundSprite_[BOT_LEFT]);
-    for (int i = 0; i < width; ++i)
-        AddSprite(TilePos(left + 1 + i, y), &groundSprite_[BOT]);
-    AddSprite(TilePos(left + width + 1, y), &groundSprite_[BOT_RIGHT]);
 
     SpawnPlayer();
-
-    Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.5) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, 9));
-    world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
-
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 5, 2.5f), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 5, 2.5f), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 7, 2.5f), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 7, 2.5f), TARGET_COOLDOWN });
 
     Camera& cam = g_Render->GetCamera();
     cam.SetPosition(Vec2{ 0, 6.5f * TILE_SIZE });
