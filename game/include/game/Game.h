@@ -59,6 +59,9 @@ private:
     static constexpr uint   MAX_PLAYERS{ 2 };
     static constexpr float  SHOOT_COOLDOWN{ 0.5f };
     static constexpr float  TARGET_COOLDOWN{ 3.0f };
+    static constexpr float  PLAYER_RESPAWN_TIME{ 5.0f };
+    static constexpr int    TARGET_DESTROY_SCORE{ 1 };
+    static constexpr int    PLAYER_KILL_SCORE{ 5 };
 
     UniquePtr<EcsWorld> world_;
 
@@ -76,6 +79,7 @@ private:
 
     int         gamepadForPlayer_[MAX_PLAYERS]{};
     float       timeToShoot_[MAX_PLAYERS]{};
+    int         playerScore_[MAX_PLAYERS]{};
     bool        isGrounded_[MAX_PLAYERS]{};
 
     // Debug
@@ -90,6 +94,7 @@ private:
     void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);
     Entity_t AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider, int playerId);
     Entity_t SpawnPlayer();
+    [[nodiscard]] Entity_t RespawnPlayer(int playerId);
 
     void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity, int playerId);
     void RemoveProjectile(uint idx);

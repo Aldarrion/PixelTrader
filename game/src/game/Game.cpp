@@ -113,6 +113,8 @@ struct SpawnPoint
 //------------------------------------------------------------------------------
 struct PlayerRespawnTimer
 {
+    int playerId_;
+    float timeLeft_;
 };
 
 //------------------------------------------------------------------------------
@@ -240,8 +242,9 @@ Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, co
 }
 
 //------------------------------------------------------------------------------
-Entity_t Game::SpawnPlayer()
+Entity_t Game::RespawnPlayer(int playerId)
 {
+    // Prepare to create entity
     Array<AnimationSegment> rockIdleSegments;
     for (uint i = 0; i < HS_ARR_LEN(rockSprite_); ++i)
         rockIdleSegments.Add(AnimationSegment{ &rockSprite_[i], 0.5f });
@@ -255,6 +258,25 @@ Entity_t Game::SpawnPlayer()
 
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
 
+    // Spawn
+    Array<Vec3> spawnPositions;
+    EcsWorld::Iter<const Position, const SpawnPoint>(world_.Get()).Each(
+        [&spawnPositions](const Position pos, const SpawnPoint)
+        {
+            spawnPositions.Add(pos);
+        }
+    );
+
+    const auto spawnIdx = (uint)((rand() * 1.0f / RAND_MAX) * spawnPositions.Count());
+    const Vec3 spawnPos = spawnPositions[spawnIdx];
+
+    Entity_t playerEntity = AddCharacter(spawnPos, rockIdle, rockCollider, playerId);
+    return playerEntity;
+}
+
+//------------------------------------------------------------------------------
+Entity_t Game::SpawnPlayer()
+{
     // Assign gamepad
     for (int gamepadI = 0; gamepadI < GLFW_JOYSTICK_LAST; ++gamepadI)
     {
@@ -279,18 +301,7 @@ Entity_t Game::SpawnPlayer()
         }
     }
 
-    Array<Vec3> spawnPositions;
-    EcsWorld::Iter<const Position, const SpawnPoint>(world_.Get()).Each(
-        [&spawnPositions](const Position pos, const SpawnPoint)
-        {
-            spawnPositions.Add(pos);
-        }
-    );
-
-    const auto spawnIdx = (uint)((rand() * 1.0f / RAND_MAX) * spawnPositions.Count());
-    const Vec3 spawnPos = spawnPositions[spawnIdx];
-
-    players_[playerCount_] = AddCharacter(spawnPos, rockIdle, rockCollider, playerCount_);
+    players_[playerCount_] = RespawnPlayer(playerCount_);
     ++playerCount_;
 
     return players_[playerCount_ - 1];
@@ -438,7 +449,7 @@ RESULT Game::LoadMap()
     Array<AnimationSegment> pumpkinIdleSegments;
     for (uint i = 0; i < HS_ARR_LEN(pumpkinSprite_); ++i)
         pumpkinIdleSegments.Add(AnimationSegment{ &pumpkinSprite_[i], 0.5f });
-    
+
     AnimationState pumpkinIdle{};
     if (HS_FAILED(pumpkinIdle.Init(pumpkinIdleSegments)))
         return R_FAIL;
@@ -448,7 +459,7 @@ RESULT Game::LoadMap()
 
     Array<AnimationSegment> chestIdleSegments;
     chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
-    
+
     AnimationState chestIdle{};
     if (HS_FAILED(chestIdle.Init(chestIdleSegments)))
         return R_FAIL;
@@ -669,12 +680,19 @@ void Game::Update()
         visualizeColliders_ = !visualizeColliders_;
     }
 
+    ImGui::Begin("Score");
+        for (int playerI = 0; playerI < playerCount_; ++playerI)
+        {
+            ImGui::Text("Player %d: %d", playerI, playerScore_[playerI]);
+        }
+    ImGui::End();
+
     // Player menu
     int newPlayerCount = playerCount_;
     ImGui::Begin("Players");
         ImGui::InputInt("Player count", &newPlayerCount);
         newPlayerCount = Clamp((uint)newPlayerCount, 1u, MAX_PLAYERS);
-        
+
         for (int playerI = 0; playerI < playerCount_; ++playerI)
         {
             ImGui::Text("Player %d input", playerI);
@@ -703,6 +721,9 @@ void Game::Update()
     float focusMultiplier[MAX_PLAYERS]{};
     for (int playerI = 0; playerI < playerCount_; ++playerI)
     {
+        if (players_[playerI] == NULL_ENTITY)
+            continue;
+
         if (g_Input->GetState(KC_LSHIFT) || g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5)
             focusMultiplier[playerI] = 0.25f;
         else
@@ -874,23 +895,46 @@ void Game::Update()
         // Collide projectiles
         {
             Array<Entity_t> toRemove;
-            Array<TargetRespawnTimer> toCreate;
-            EcsWorld::Iter<const Entity_t, Position, Rotation, TipCollider, SpriteComponent>(world_.Get()).Each(
-                [this, &toRemove, &toCreate](Entity_t projectile, Position& position, Rotation& rotation, TipCollider& collider, SpriteComponent& sprite)
+            Array<TargetRespawnTimer> toCreateTargetRespawn;
+            Array<PlayerRespawnTimer> toCreatePlayerRespawn;
+            EcsWorld::Iter<const Entity_t, Position, Rotation, TipCollider, SpriteComponent, const Projectile>(world_.Get()).Each(
+                [this, &toRemove, &toCreateTargetRespawn, &toCreatePlayerRespawn]
+                (Entity_t projectile, Position& position, Rotation& rotation, TipCollider& collider, SpriteComponent& sprite, Projectile projectileComponent)
                 {
                     Mat44 projectileTransform = MakeTransform(position, rotation.angle_, sprite.sprite_->pivot_);
                     Vec2 projPos = projectileTransform.TransformPos(collider.collider_.center_);
                     bool shouldRemove = false;
 
-                    EcsWorld::Iter<const Entity_t, Position, TargetCollider>(world_.Get()).Each(
-                        [this, &shouldRemove, &toRemove, &toCreate, projPos, &tipCollider = collider.collider_](Entity_t target, Position& targetPos, TargetCollider targetCollider)
+                    EcsWorld::Iter<const Entity_t, const Position, const TargetCollider>(world_.Get()).Each(
+                        [this, &shouldRemove, &toRemove, &toCreateTargetRespawn, projPos, &tipCollider = collider.collider_, projectileComponent]
+                        (Entity_t target, Position targetPos, TargetCollider targetCollider)
                         {
                             Vec2 tgtPos = targetPos.XY() + targetCollider.collider_.center_;
                             if (IsIntersecting(Circle(projPos, tipCollider.radius_), Circle(tgtPos, targetCollider.collider_.radius_)))
                             {
                                 shouldRemove = true;
+
+                                playerScore_[projectileComponent.shooterId_] += TARGET_DESTROY_SCORE;
                                 toRemove.AddUnique(target);
-                                toCreate.Add(TargetRespawnTimer{ targetPos, TARGET_COOLDOWN });
+                                toCreateTargetRespawn.Add(TargetRespawnTimer{ targetPos, TARGET_COOLDOWN });
+                            }
+                        }
+                    );
+
+                    EcsWorld::Iter<const Entity_t, const Position, const ColliderComponent, const PlayerComponent>(world_.Get()).Each(
+                        [this, &shouldRemove, &toRemove, &toCreatePlayerRespawn, projPos, &tipCollider = collider.collider_, projectileComponent]
+                        (Entity_t playerEntity, Position playerPos, ColliderComponent playerCollider, const PlayerComponent& player)
+                        {
+                            Box2D playerColliderWorld = playerCollider.collider_.Offset(playerPos.XY());
+                            if (player.playerId_ != projectileComponent.shooterId_ && IsIntersecting(playerColliderWorld, tipCollider.Offset(projPos)))
+                            {
+                                shouldRemove = true;
+
+                                playerScore_[projectileComponent.shooterId_] += PLAYER_KILL_SCORE;
+                                toRemove.AddUnique(playerEntity);
+                                toCreatePlayerRespawn.Add(PlayerRespawnTimer{ player.playerId_, PLAYER_RESPAWN_TIME });
+                                players_[player.playerId_] = NULL_ENTITY;
+                                LOG_DBG("Player %d killed by player %d, score: %d, %d", player.playerId_, projectileComponent.shooterId_, playerScore_[0], playerScore_[1]);
                             }
                         }
                     );
@@ -903,12 +947,34 @@ void Game::Update()
             for (int i = 0; i < toRemove.Count(); ++i)
                 world_->DeleteEntity(toRemove[i]);
 
-            for (int i = 0; i < toCreate.Count(); ++i)
-                world_->CreateEntity(toCreate[i]);
+            for (const auto& targetRespawn : toCreateTargetRespawn)
+                world_->CreateEntity(targetRespawn);
+
+            for (int i = 0; i < toCreatePlayerRespawn.Count(); ++i)
+                world_->CreateEntity(toCreatePlayerRespawn[i]);
         }
     }
 
-    // Spawn target
+    // Spawn players
+    {
+        Array<Entity_t> timersToRemove;
+        EcsWorld::Iter<const Entity_t, PlayerRespawnTimer>(world_.Get()).Each(
+            [this, dTime = GetDTime(), &timersToRemove](Entity_t eid, PlayerRespawnTimer& timer)
+            {
+                timer.timeLeft_ -= dTime;
+                if (timer.timeLeft_ <= 0)
+                {
+                    timersToRemove.Add(eid);
+                    players_[timer.playerId_] = RespawnPlayer(timer.playerId_);
+                }
+            }
+        );
+
+        for (int i = 0; i < timersToRemove.Count(); ++i)
+            world_->DeleteEntity(timersToRemove[i]);
+    }
+
+    // Spawn targets
     {
         Array<Entity_t> timersToRemove;
         EcsWorld::Iter<const Entity_t, TargetRespawnTimer>(world_.Get()).Each(

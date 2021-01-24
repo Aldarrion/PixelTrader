@@ -18,6 +18,7 @@ template<class T>
 struct TypeInfo;
 
 static constexpr uint ID_BAD{ (uint)-1 };
+static constexpr Entity_t NULL_ENTITY{ 0 };
 
 namespace internal
 {
