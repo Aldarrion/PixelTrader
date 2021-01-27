@@ -30,6 +30,13 @@ struct AnimationSegment
 };
 
 //------------------------------------------------------------------------------
+struct PlayerInfo
+{
+    Entity_t playerEntity_;
+    Entity_t weaponEntity_;
+};
+
+//------------------------------------------------------------------------------
 struct AnimationState;
 
 //------------------------------------------------------------------------------
@@ -63,6 +70,8 @@ private:
     static constexpr int    TARGET_DESTROY_SCORE{ 1 };
     static constexpr int    PLAYER_KILL_SCORE{ 5 };
 
+    static constexpr float  LAYER_WEAPON{ 0.4f };
+
     UniquePtr<EcsWorld> world_;
 
     Sprite groundSprite_[3 * 3]{};
@@ -73,9 +82,10 @@ private:
     Sprite forestDoorSprite_{};
     Sprite arrowSprite_{};
     Sprite targetSprite_{};
+    Sprite bowSprite_{};
 
     int         playerCount_{ 0 };
-    Entity_t    players_[MAX_PLAYERS]{};
+    PlayerInfo  players_[MAX_PLAYERS]{};
 
     int         gamepadForPlayer_[MAX_PLAYERS]{};
     float       timeToShoot_[MAX_PLAYERS]{};
@@ -92,9 +102,8 @@ private:
 
     void AddSprite(const Vec3& pos, Sprite* sprite);
     void AddObject(const Vec3& pos, const AnimationState& animation, const Box2D* collider);
-    Entity_t AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider, int playerId);
     Entity_t SpawnPlayer();
-    [[nodiscard]] Entity_t RespawnPlayer(int playerId);
+    [[nodiscard]] PlayerInfo RespawnPlayer(int playerId);
 
     void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity, int playerId);
     void RemoveProjectile(uint idx);

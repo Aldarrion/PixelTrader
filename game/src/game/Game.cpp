@@ -113,7 +113,7 @@ struct SpawnPoint
 //------------------------------------------------------------------------------
 struct PlayerRespawnTimer
 {
-    int playerId_;
+    int playerEntity_;
     float timeLeft_;
 };
 
@@ -228,21 +228,7 @@ void Game::AddObject(const Vec3& pos, const AnimationState& animation, const Box
 }
 
 //------------------------------------------------------------------------------
-Entity_t Game::AddCharacter(const Vec3& pos, const AnimationState& animation, const Box2D& collider, int playerId)
-{
-    auto eid = world_->CreateEntity(
-        Position{ pos },
-        Velocity{ Vec2::ZERO() },
-        animation,
-        ColliderComponent{ collider },
-        SpriteComponent{ animation.GetCurrentSprite() },
-        PlayerComponent{ playerId }
-    );
-    return eid;
-}
-
-//------------------------------------------------------------------------------
-Entity_t Game::RespawnPlayer(int playerId)
+PlayerInfo Game::RespawnPlayer(int playerId)
 {
     // Prepare to create entity
     Array<AnimationSegment> rockIdleSegments;
@@ -253,7 +239,7 @@ Entity_t Game::RespawnPlayer(int playerId)
     if (HS_FAILED(rockIdle.Init(rockIdleSegments)))
     {
         hs_assert(false);
-        return 0;
+        return {};
     }
 
     Box2D rockCollider = MakeBox2DPosSize(Vec2(6, 1), Vec2(18, 29));
@@ -270,8 +256,24 @@ Entity_t Game::RespawnPlayer(int playerId)
     const auto spawnIdx = (uint)((rand() * 1.0f / RAND_MAX) * spawnPositions.Count());
     const Vec3 spawnPos = spawnPositions[spawnIdx];
 
-    Entity_t playerEntity = AddCharacter(spawnPos, rockIdle, rockCollider, playerId);
-    return playerEntity;
+    PlayerInfo playerInfo{};
+    playerInfo.playerEntity_ = world_->CreateEntity(
+        Position{ spawnPos },
+        Velocity{ Vec2::ZERO() },
+        rockIdle,
+        ColliderComponent{ rockCollider },
+        SpriteComponent{ rockIdle.GetCurrentSprite() },
+        PlayerComponent{ playerId }
+    );
+
+    Vec2 weaponPosOffset(rockIdle.GetCurrentSprite()->size_ / 2.0f);
+    playerInfo.weaponEntity_ = world_->CreateEntity(
+        Position{ Vec3(spawnPos.x + weaponPosOffset.x, spawnPos.x + weaponPosOffset.y, LAYER_WEAPON) }, 
+        Rotation { 0.0f },
+        SpriteComponent{ &bowSprite_ }
+    );
+
+    return playerInfo;
 }
 
 //------------------------------------------------------------------------------
@@ -304,7 +306,7 @@ Entity_t Game::SpawnPlayer()
     players_[playerCount_] = RespawnPlayer(playerCount_);
     ++playerCount_;
 
-    return players_[playerCount_ - 1];
+    return players_[playerCount_ - 1].playerEntity_;
 }
 
 //------------------------------------------------------------------------------
@@ -570,6 +572,9 @@ RESULT Game::Init()
     if (HS_FAILED(MakeSimpleSprite("textures/Target.png", targetSprite_, Vec2::ZERO())))
         return R_FAIL;
 
+    if (HS_FAILED(MakeSimpleSprite("textures/BowSimple.png", bowSprite_, Vec2(0.1f, 0.5f))))
+        return R_FAIL;
+
     if (HS_FAILED(LoadMap()))
         return R_FAIL;
 
@@ -662,6 +667,8 @@ static Vec2 CursorToWorld()
 //------------------------------------------------------------------------------
 static float RotationFromDirection(Vec2 dirNormalized)
 {
+    hs_assert(fabs(dirNormalized.Length() - 1.0f) < 0.001f && "Direction must be normalized");
+
     float dotX = dirNormalized.Dot(Vec2::RIGHT());
     float dotY = dirNormalized.Dot(Vec2::UP());
     float angle = acosf(dotX);
@@ -669,6 +676,12 @@ static float RotationFromDirection(Vec2 dirNormalized)
         angle = HS_TAU - angle;
 
     return angle;
+}
+
+//------------------------------------------------------------------------------
+static Vec2 DirectionFromRotation(float rotation)
+{
+    return Vec2(cosf(rotation), sinf(rotation));
 }
 
 //------------------------------------------------------------------------------
@@ -721,7 +734,7 @@ void Game::Update()
     float focusMultiplier[MAX_PLAYERS]{};
     for (int playerI = 0; playerI < playerCount_; ++playerI)
     {
-        if (players_[playerI] == NULL_ENTITY)
+        if (players_[playerI].playerEntity_ == NULL_ENTITY)
             continue;
 
         if (g_Input->GetState(KC_LSHIFT) || g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5)
@@ -729,7 +742,7 @@ void Game::Update()
         else
             focusMultiplier[playerI] = 1.0;
 
-        Vec2& velocity = world_->GetComponent<Velocity>(players_[playerI]);
+        Vec2& velocity = world_->GetComponent<Velocity>(players_[playerI].playerEntity_);
         velocity.y += gravity * g_Engine->GetDTime() * focusMultiplier[playerI];
         velocity.x = 0;
 
@@ -754,14 +767,14 @@ void Game::Update()
             velocity.x += characterSpeed * xAxis;
         }
 
-        Vec3& pos = world_->GetComponent<Position>(players_[playerI]);
+        Vec3& pos = world_->GetComponent<Position>(players_[playerI].playerEntity_);
 
         isGrounded_[playerI] = false;
 
         Vec2 dtVel = velocity * g_Engine->GetDTime() * focusMultiplier[playerI];
 
         Vec2 pos2 = pos.XY();
-        const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(players_[playerI]);
+        const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(players_[playerI].playerEntity_);
         Box2D playerCollider = originalCollider.collider_.Offset(pos.XY());
 
         auto SolveIntersection = [this, pos2, &dtVel, &originalCollider, &playerCollider](const Box2D& groundCollider, int playerI)
@@ -806,10 +819,6 @@ void Game::Update()
         pos.x += dtVel.x;
         pos.y += dtVel.y;
 
-        //Camera& cam = g_Render->GetCamera();
-        //cam.SetPosition(Vec2{ pos.x, pos.y } + (world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2.0f)); // Center the camera pos at the center of the player
-        //cam.UpdateMatrices();
-
         static Vec2 maxPlayerVelocity(Vec2::ZERO());
         static Vec2 minPlayerVelocity(Vec2::ZERO());
         maxPlayerVelocity.x = Max(maxPlayerVelocity.x, velocity.x);
@@ -821,11 +830,42 @@ void Game::Update()
         ImGui::Text("Max player %d velocity: [%.2f, %.2f]", playerI, maxPlayerVelocity.x, maxPlayerVelocity.y);
         ImGui::Text("Min player %d velocity: [%.2f, %.2f]", playerI, minPlayerVelocity.x, minPlayerVelocity.y);
 
+        // Weapon update
+        {
+            const Sprite* playerSprite = world_->GetComponent<AnimationState>(players_[playerI].playerEntity_).GetCurrentSprite();
+            Vec3 weaponPos(0, 0, LAYER_WEAPON);
+            weaponPos.x = pos.x + playerSprite->size_.x / 2.0f;
+            weaponPos.y = pos.y + playerSprite->size_.y / 2.0f;
+
+            Vec2 dir;
+            dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
+            dir.y = -g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_Y);
+            if (dir.Length() > 0.5f)
+            {
+                Vec2 dirNormalized = dir.Normalized();
+                constexpr float AIM_STEP = HS_TAU / (36.0f * 2);
+
+                const float angle = RotationFromDirection(dirNormalized);
+                const float inNumbers = (angle * 0.5f) / AIM_STEP;
+                const float snapNumber = round(inNumbers);
+                const float snapAngle = (snapNumber * AIM_STEP) / 0.5f;
+
+                LOG_DBG("angle %f", angle);
+                LOG_DBG("inNumbers %f", inNumbers);
+                LOG_DBG("snapNumber %f", snapNumber);
+                LOG_DBG("snapAngle %f", snapAngle);
+
+                world_->SetComponents<Rotation>(players_[playerI].weaponEntity_, Rotation { snapAngle });
+            }
+
+            world_->SetComponents<Position>(players_[playerI].weaponEntity_, Position{ weaponPos });
+        }
+
         // Shooting
         timeToShoot_[playerI] = Max(timeToShoot_[playerI] - GetDTime(), 0.0f);
         if (timeToShoot_[playerI] <= 0)
         {
-            const Vec2 projPos = world_->GetComponent<Position>(players_[playerI]).XY() + world_->GetComponent<SpriteComponent>(players_[playerI]).sprite_->size_ / 2;
+            const Vec2 projPos = world_->GetComponent<Position>(players_[playerI].playerEntity_).XY() + world_->GetComponent<SpriteComponent>(players_[playerI].playerEntity_).sprite_->size_ / 2;
             Vec2 dir;
             bool shouldShoot = false;
 
@@ -838,14 +878,15 @@ void Game::Update()
             else if (g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER))
             {
                 shouldShoot = true;
-                dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
+                /*dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
                 dir.y = -g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_Y);
 
                 if (dir.LengthSqr() == 0)
-                    dir.x = world_->GetComponent<Velocity>(players_[playerI]).x;
+                    dir.x = world_->GetComponent<Velocity>(players_[playerI].playerEntity_).x;
 
                 if (dir.LengthSqr() == 0)
-                    dir.x = 1;
+                    dir.x = 1;*/
+                dir = DirectionFromRotation(world_->GetComponent<Rotation>(players_[playerI].weaponEntity_).angle_);
             }
 
             if (shouldShoot)
@@ -856,7 +897,7 @@ void Game::Update()
                 float angle = RotationFromDirection(dir);
 
                 constexpr float PLAYER_VELOCITY_WEIGHT = 0.7f;
-                Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(players_[playerI]) * PLAYER_VELOCITY_WEIGHT * focusMultiplier[playerI];
+                Vec2 projectileVelocity = dir * projectileSpeed + world_->GetComponent<Velocity>(players_[playerI].playerEntity_) * PLAYER_VELOCITY_WEIGHT * focusMultiplier[playerI];
                 AddProjectile(
                     Vec3(projPos.x, projPos.y, 0.5f),
                     angle,
@@ -932,8 +973,9 @@ void Game::Update()
 
                                 playerScore_[projectileComponent.shooterId_] += PLAYER_KILL_SCORE;
                                 toRemove.AddUnique(playerEntity);
+                                toRemove.AddUnique(players_[player.playerId_].weaponEntity_);
                                 toCreatePlayerRespawn.Add(PlayerRespawnTimer{ player.playerId_, PLAYER_RESPAWN_TIME });
-                                players_[player.playerId_] = NULL_ENTITY;
+                                players_[player.playerId_] = { NULL_ENTITY, NULL_ENTITY };
                                 LOG_DBG("Player %d killed by player %d, score: %d, %d", player.playerId_, projectileComponent.shooterId_, playerScore_[0], playerScore_[1]);
                             }
                         }
@@ -965,7 +1007,7 @@ void Game::Update()
                 if (timer.timeLeft_ <= 0)
                 {
                     timersToRemove.Add(eid);
-                    players_[timer.playerId_] = RespawnPlayer(timer.playerId_);
+                    players_[timer.playerEntity_] = RespawnPlayer(timer.playerEntity_);
                 }
             }
         );
@@ -1009,7 +1051,6 @@ void Game::Update()
     );
 
     // Projectiles
-
     EcsWorld::Iter<const SpriteComponent, const Position, const Rotation>(world_.Get()).Each(
         [sr](const SpriteComponent sprite, const Position& position, const Rotation rotation)
         {
