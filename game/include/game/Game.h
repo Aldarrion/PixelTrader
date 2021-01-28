@@ -70,6 +70,7 @@ private:
     static constexpr int    TARGET_DESTROY_SCORE{ 1 };
     static constexpr int    PLAYER_KILL_SCORE{ 5 };
 
+    static constexpr float  LAYER_TARGET{ 2.5f };
     static constexpr float  LAYER_WEAPON{ 0.4f };
 
     UniquePtr<EcsWorld> world_;
@@ -84,6 +85,8 @@ private:
     Sprite targetSprite_{};
     Sprite bowSprite_{};
 
+    float       timeScale_{ 1.0f };
+
     int         playerCount_{ 0 };
     PlayerInfo  players_[MAX_PLAYERS]{};
 
@@ -91,6 +94,7 @@ private:
     float       timeToShoot_[MAX_PLAYERS]{};
     int         playerScore_[MAX_PLAYERS]{};
     bool        isGrounded_[MAX_PLAYERS]{};
+    bool        hasDoubleJumped_[MAX_PLAYERS]{};
 
     // Debug
     bool visualizeColliders_{};

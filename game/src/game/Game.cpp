@@ -456,8 +456,13 @@ RESULT Game::LoadMap()
     if (HS_FAILED(pumpkinIdle.Init(pumpkinIdleSegments)))
         return R_FAIL;
     Box2D pumpkinCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(12, 10));
-    AddObject(Vec3(3 * TILE_SIZE, 9, 1), pumpkinIdle, &pumpkinCollider);
-    AddObject(Vec3(1 * TILE_SIZE, 1.5 * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
+
+    auto MakePumpkin = [this, &pumpkinCollider, &pumpkinIdle](float x, float y)
+    {
+        AddObject(Vec3(x * TILE_SIZE, y * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
+    };
+    MakePumpkin(11, 1);
+    MakePumpkin(9, 2.5f);
 
     Array<AnimationSegment> chestIdleSegments;
     chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
@@ -467,45 +472,73 @@ RESULT Game::LoadMap()
         return R_FAIL;
 
     Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
-    AddObject(TilePos(0, 0.5f, 1), chestIdle, &chestCollider);
+    AddObject(TilePos(8, 1.5f, 1), chestIdle, &chestCollider);
 
-    int bot = - 1;
-    int left = -12;
-    int width = 22;
-    int height = 15;
+    // Main arena
+    {
+        int left = 0;
+        int bot = 0;
+        int width = 22;
+        int height = 15;
 
-    AddSprite(TilePos(left, bot + 1), &groundSprite_[TOP_LEFT]);
-    for (int i = 0; i < width; ++i)
-        AddSprite(TilePos(left + 1 + i, bot + 1), &groundSprite_[TOP]);
-    AddSprite(TilePos(left + width + 1, bot + 1), &groundSprite_[TOP_RIGHT]);
+        AddSprite(TilePos(left, bot + 1), &groundSprite_[TOP_LEFT]);
+        for (int i = 0; i < width; ++i)
+            AddSprite(TilePos(left + 1 + i, bot + 1), &groundSprite_[TOP]);
+        AddSprite(TilePos(left + width + 1, bot + 1), &groundSprite_[TOP_RIGHT]);
 
-    for (int i = 0; i < height; ++i)
-        AddSprite(TilePos(left, bot + i, 0.1f), &groundSprite_[MID_RIGHT]);
+        for (int i = 0; i < height; ++i)
+            AddSprite(TilePos(left, bot + i, 0.1f), &groundSprite_[MID_RIGHT]);
 
-    for (int i = 0; i < height; ++i)
-        AddSprite(TilePos(left + width + 1, bot + i, 0.1f), &groundSprite_[MID_LEFT]);
+        for (int i = 0; i < height; ++i)
+            AddSprite(TilePos(left + width + 1, bot + i, 0.1f), &groundSprite_[MID_LEFT]);
 
-    AddSprite(TilePos(left, bot), &groundSprite_[BOT_LEFT]);
-    for (int i = 0; i < width; ++i)
-        AddSprite(TilePos(left + 1 + i, bot), &groundSprite_[BOT]);
-    AddSprite(TilePos(left + width + 1, bot), &groundSprite_[BOT_RIGHT]);
+        AddSprite(TilePos(left, bot), &groundSprite_[BOT_LEFT]);
+        for (int i = 0; i < width; ++i)
+            AddSprite(TilePos(left + 1 + i, bot), &groundSprite_[BOT]);
+        AddSprite(TilePos(left + width + 1, bot), &groundSprite_[BOT_RIGHT]);
 
-    Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.25f) * TILE_SIZE, -10 * TILE_SIZE), Vec2((left + width + 1.75f) * TILE_SIZE, 9));
-    world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+        Box2D groundCollider = MakeBox2DMinMax(Vec2((left + 0.25f) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + width + 1.75f) * TILE_SIZE, 1.5f * TILE_SIZE));
+        world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
 
-    Box2D leftWallCollider = MakeBox2DMinMax(Vec2((left) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + 0.75f) * TILE_SIZE, height * TILE_SIZE));
-    world_->CreateEntity(ColliderComponent{ leftWallCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+        Box2D leftWallCollider = MakeBox2DMinMax(Vec2((left) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + 0.75f) * TILE_SIZE, height * TILE_SIZE));
+        world_->CreateEntity(ColliderComponent{ leftWallCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
 
-    Box2D rightWallCollider = MakeBox2DMinMax(Vec2((left + width + 1.25f) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, height * TILE_SIZE));
-    world_->CreateEntity(ColliderComponent{ rightWallCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+        Box2D rightWallCollider = MakeBox2DMinMax(Vec2((left + width + 1.25f) * TILE_SIZE, bot * TILE_SIZE), Vec2((left + width + 2) * TILE_SIZE, height * TILE_SIZE));
+        world_->CreateEntity(ColliderComponent{ rightWallCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+    }
 
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 5, 2.5f), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 5, 2.5f), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(5, 7, 2.5f), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(-5, 7, 2.5f), TARGET_COOLDOWN });
+    // Platforms
+    auto MakePlatform = [this](float left, float bot, float width)
+    {
+        int height = 1;
 
-    world_->CreateEntity(Position{ Vec3(-2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
-    world_->CreateEntity(Position{ Vec3(2 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
+        Box2D groundCollider = MakeBox2DMinMax(
+            Vec2((left + 0.25f) * TILE_SIZE, bot * TILE_SIZE), 
+            Vec2((left + 0.75f + width) * TILE_SIZE, (bot + height - 0.5f) * TILE_SIZE)
+        );
+        world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
+
+        AddSprite(TilePos(left, bot + height - 1), &groundSprite_[TOP_LEFT]);
+        for (float x = left + 1; x < left + width; ++x)
+            AddSprite(TilePos(x, bot + height - 1), &groundSprite_[TOP]);
+        AddSprite(TilePos(left + width, bot + height - 1), &groundSprite_[TOP_RIGHT]);
+    };
+
+    MakePlatform(1, 4, 3);
+    MakePlatform(5, 7.5f, 3);
+    MakePlatform(14, 6, 4);
+
+    MakePumpkin(14 + 4, 5 + 1);
+
+    // Targets
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(17, 6, LAYER_TARGET), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 6, LAYER_TARGET), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(17, 8, LAYER_TARGET), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 8, LAYER_TARGET), TARGET_COOLDOWN });
+
+    // Spawn points
+    world_->CreateEntity(Position{ Vec3(10 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
+    world_->CreateEntity(Position{ Vec3(14 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
 
     return R_OK;
 }
@@ -581,7 +614,7 @@ RESULT Game::Init()
     SpawnPlayer();
 
     Camera& cam = g_Render->GetCamera();
-    cam.SetPosition(Vec2{ 0, 6.5f * TILE_SIZE });
+    cam.SetPosition(Vec2{ 12 * TILE_SIZE, 7.5f * TILE_SIZE });
     cam.UpdateMatrices();
 
     return R_OK;
@@ -590,7 +623,8 @@ RESULT Game::Init()
 //------------------------------------------------------------------------------
 float Game::GetDTime()
 {
-    return g_Engine->GetDTime();
+    const float dtime = g_Engine->GetDTime();
+    return timeScale_ * dtime;
 }
 
 //------------------------------------------------------------------------------
@@ -601,14 +635,14 @@ RESULT Game::OnWindowResized()
 }
 
 //------------------------------------------------------------------------------
-static constexpr float height = 32;
-static constexpr float timeToJump = 0.3f;
-static constexpr float jumpVelocity = (2 * height) / (timeToJump);
-static constexpr float gravity = (-2 * height) / Sqr(timeToJump);
-static constexpr float groundLevel = 8;
+static float height = 32;
+static float timeToJump = 0.3f;
+static float jumpVelocity = (2 * height) / (timeToJump);
+static float gravity = (-2 * height) / Sqr(timeToJump);
+static float groundLevel = 8;
 
 //------------------------------------------------------------------------------
-static constexpr float projectileGravity = gravity / 10;
+static float projectileGravity = gravity / 10;
 float projectileSpeed = 150.0f;
 
 //------------------------------------------------------------------------------
@@ -728,6 +762,7 @@ void Game::Update()
 
     ImGui::Begin("Settings");
         ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
+        ImGui::SliderFloat("Time scale", &timeScale_, 0.0f, 4.0f);
     ImGui::End();
 
     // Movement
@@ -743,13 +778,21 @@ void Game::Update()
             focusMultiplier[playerI] = 1.0;
 
         Vec2& velocity = world_->GetComponent<Velocity>(players_[playerI].playerEntity_);
-        velocity.y += gravity * g_Engine->GetDTime() * focusMultiplier[playerI];
+        velocity.y += gravity * GetDTime() * focusMultiplier[playerI];
         velocity.x = 0;
 
         float characterSpeed{ 80 };
-        if (isGrounded_[playerI] && (g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
+        if ((g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
         {
-            velocity.y = jumpVelocity;
+            if (isGrounded_[playerI])
+            {
+                velocity.y = jumpVelocity;
+            }
+            else if (!hasDoubleJumped_[playerI])
+            {
+                velocity.y = jumpVelocity;
+                hasDoubleJumped_[playerI] = true;
+            }
         }
 
         if (g_Input->GetState(KC_D))
@@ -771,7 +814,7 @@ void Game::Update()
 
         isGrounded_[playerI] = false;
 
-        Vec2 dtVel = velocity * g_Engine->GetDTime() * focusMultiplier[playerI];
+        Vec2 dtVel = velocity * GetDTime() * focusMultiplier[playerI];
 
         Vec2 pos2 = pos.XY();
         const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(players_[playerI].playerEntity_);
@@ -798,6 +841,7 @@ void Game::Update()
                     if (closeNormal == Vec2::UP())
                     {
                         isGrounded_[playerI] = true;
+                        hasDoubleJumped_[playerI] = false;
                     }
                 }
             }
@@ -917,8 +961,8 @@ void Game::Update()
             EcsWorld::Iter<const Entity_t, Position, Velocity, Rotation>(world_.Get()).Each(
                 [this, &projectilesToRemove](Entity_t eid, Position& position, Velocity& velocity, Rotation& rotation)
                 {
-                    velocity.y += projectileGravity * g_Engine->GetDTime();
-                    position.AddXY(velocity * g_Engine->GetDTime());
+                    velocity.y += projectileGravity * GetDTime();
+                    position.AddXY(velocity * GetDTime());
 
                     rotation.angle_ = RotationFromDirection(velocity.Normalized());
 
@@ -967,7 +1011,7 @@ void Game::Update()
                         (Entity_t playerEntity, Position playerPos, ColliderComponent playerCollider, const PlayerComponent& player)
                         {
                             Box2D playerColliderWorld = playerCollider.collider_.Offset(playerPos.XY());
-                            if (player.playerId_ != projectileComponent.shooterId_ && IsIntersecting(playerColliderWorld, tipCollider.Offset(projPos)))
+                            if (player.playerId_ != projectileComponent.shooterId_ && IsIntersecting(playerColliderWorld, Circle(projPos, tipCollider.radius_)))
                             {
                                 shouldRemove = true;
 
@@ -977,6 +1021,18 @@ void Game::Update()
                                 toCreatePlayerRespawn.Add(PlayerRespawnTimer{ player.playerId_, PLAYER_RESPAWN_TIME });
                                 players_[player.playerId_] = { NULL_ENTITY, NULL_ENTITY };
                                 LOG_DBG("Player %d killed by player %d, score: %d, %d", player.playerId_, projectileComponent.shooterId_, playerScore_[0], playerScore_[1]);
+                            }
+                        }
+                    );
+
+                    EcsWorld::Iter<const ColliderComponent, const Position>(world_.Get()).EachExcept<PlayerComponent>(
+                        [&shouldRemove, &tipCollider = collider.collider_, projPos]
+                        (const ColliderComponent& collider, const Position& pos)
+                        {
+                            if (IsIntersecting(collider.collider_.Offset(pos.XY()), Circle(projPos, tipCollider.radius_)))
+                            {
+                                shouldRemove = true;
+                                return;
                             }
                         }
                     );
