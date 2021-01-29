@@ -527,6 +527,8 @@ RESULT Game::LoadMap()
     MakePlatform(1, 4, 3);
     MakePlatform(5, 7.5f, 3);
     MakePlatform(14, 6, 4);
+    MakePlatform(20, 10, 2);
+    MakePlatform(20, 4.5, 1);
 
     MakePumpkin(14 + 4, 5 + 1);
 
@@ -781,12 +783,16 @@ void Game::Update()
         velocity.y += gravity * GetDTime() * focusMultiplier[playerI];
         velocity.x = 0;
 
+        if (!isGrounded_[playerI])
+            coyoteTimeRemaining_[playerI] -= GetDTime();
+
         float characterSpeed{ 80 };
         if ((g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
         {
-            if (isGrounded_[playerI])
+            if (isGrounded_[playerI] || coyoteTimeRemaining_[playerI] > 0)
             {
                 velocity.y = jumpVelocity;
+                coyoteTimeRemaining_[playerI] = 0;
             }
             else if (!hasDoubleJumped_[playerI])
             {
@@ -842,6 +848,7 @@ void Game::Update()
                     {
                         isGrounded_[playerI] = true;
                         hasDoubleJumped_[playerI] = false;
+                        coyoteTimeRemaining_[playerI] = coyoteTimeSec_;
                     }
                     else if (closeNormal == -Vec2::UP())
                     {
@@ -876,6 +883,7 @@ void Game::Update()
         minPlayerVelocity.x = Min(minPlayerVelocity.x, velocity.x);
         minPlayerVelocity.y = Min(minPlayerVelocity.y, velocity.y);
 
+        ImGui::Text("IsGrounded %d", isGrounded_[0]);
         ImGui::Text("Cur player %d velocity: [%.2f, %.2f]", playerI, velocity.x, velocity.y);
         ImGui::Text("Max player %d velocity: [%.2f, %.2f]", playerI, maxPlayerVelocity.x, maxPlayerVelocity.y);
         ImGui::Text("Min player %d velocity: [%.2f, %.2f]", playerI, minPlayerVelocity.x, minPlayerVelocity.y);

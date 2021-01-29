@@ -86,12 +86,14 @@ private:
     Sprite bowSprite_{};
 
     float       timeScale_{ 1.0f };
+    float       coyoteTimeSec_{ 100.0f / 1000 };
 
     int         playerCount_{ 0 };
     PlayerInfo  players_[MAX_PLAYERS]{};
 
     int         gamepadForPlayer_[MAX_PLAYERS]{};
     float       timeToShoot_[MAX_PLAYERS]{};
+    float       coyoteTimeRemaining_[MAX_PLAYERS]{};
     int         playerScore_[MAX_PLAYERS]{};
     bool        isGrounded_[MAX_PLAYERS]{};
     bool        hasDoubleJumped_[MAX_PLAYERS]{};
