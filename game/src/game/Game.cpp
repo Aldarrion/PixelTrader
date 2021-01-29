@@ -531,10 +531,10 @@ RESULT Game::LoadMap()
     MakePumpkin(14 + 4, 5 + 1);
 
     // Targets
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(17, 6, LAYER_TARGET), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 6, LAYER_TARGET), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(17, 8, LAYER_TARGET), TARGET_COOLDOWN });
-    world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 8, LAYER_TARGET), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(21, 12, LAYER_TARGET), TARGET_COOLDOWN });
+    //world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 6, LAYER_TARGET), TARGET_COOLDOWN });
+    //world_->CreateEntity(TargetRespawnTimer{ TilePos(17, 8, LAYER_TARGET), TARGET_COOLDOWN });
+    //world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 8, LAYER_TARGET), TARGET_COOLDOWN });
 
     // Spawn points
     world_->CreateEntity(Position{ Vec3(10 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
@@ -820,7 +820,7 @@ void Game::Update()
         const ColliderComponent& originalCollider = world_->GetComponent<ColliderComponent>(players_[playerI].playerEntity_);
         Box2D playerCollider = originalCollider.collider_.Offset(pos.XY());
 
-        auto SolveIntersection = [this, pos2, &dtVel, &originalCollider, &playerCollider](const Box2D& groundCollider, int playerI)
+        auto SolveIntersection = [this, pos2, &dtVel, &originalCollider, &playerCollider, &velocity](const Box2D& groundCollider, int playerI)
         {
             IntersectionResult intersection = IsIntersecting(groundCollider, playerCollider, dtVel);
             if (intersection.isIntersecting_)
@@ -842,6 +842,12 @@ void Game::Update()
                     {
                         isGrounded_[playerI] = true;
                         hasDoubleJumped_[playerI] = false;
+                    }
+                    else if (closeNormal == -Vec2::UP())
+                    {
+                        // Bounce from the object that is above us - stop the jump
+                        dtVel.y = 0;
+                        velocity.y = 0;
                     }
                 }
             }
