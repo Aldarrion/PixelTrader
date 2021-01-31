@@ -944,11 +944,6 @@ void Game::Update()
                 const float snapNumber = round(inNumbers);
                 const float snapAngle = (snapNumber * AIM_STEP) / 0.5f;
 
-                LOG_DBG("angle %f", angle);
-                LOG_DBG("inNumbers %f", inNumbers);
-                LOG_DBG("snapNumber %f", snapNumber);
-                LOG_DBG("snapAngle %f", snapAngle);
-
                 world_->SetComponents<Rotation>(players_[playerI].weaponEntity_, Rotation { snapAngle });
             }
 
