@@ -534,13 +534,15 @@ RESULT Game::LoadMap()
 
     // Targets
     world_->CreateEntity(TargetRespawnTimer{ TilePos(21, 12, LAYER_TARGET), TARGET_COOLDOWN });
-    //world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 6, LAYER_TARGET), TARGET_COOLDOWN });
+    world_->CreateEntity(TargetRespawnTimer{ TilePos(16, 5, LAYER_TARGET), TARGET_COOLDOWN });
     //world_->CreateEntity(TargetRespawnTimer{ TilePos(17, 8, LAYER_TARGET), TARGET_COOLDOWN });
     //world_->CreateEntity(TargetRespawnTimer{ TilePos(7, 8, LAYER_TARGET), TARGET_COOLDOWN });
 
     // Spawn points
+    world_->CreateEntity(Position{ Vec3(20 * TILE_SIZE, 5 * TILE_SIZE, 1) }, SpawnPoint{});
+    world_->CreateEntity(Position{ Vec3(6 * TILE_SIZE, 8 * TILE_SIZE, 1) }, SpawnPoint{});
+    world_->CreateEntity(Position{ Vec3(2 * TILE_SIZE, 1.5 * TILE_SIZE, 1) }, SpawnPoint{});
     world_->CreateEntity(Position{ Vec3(10 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
-    world_->CreateEntity(Position{ Vec3(14 * TILE_SIZE, 0.5f * TILE_SIZE + 50, 1) }, SpawnPoint{});
 
     return R_OK;
 }
@@ -750,7 +752,7 @@ static Vec2 DirectionFromRotation(float rotation)
 void Game::Update()
 {
     // Audio
-    if (uint queuedAudioSize = SDL_GetQueuedAudioSize(audioDevice_) < 2 * musicLength_)
+    if (!muteAudio_ && SDL_GetQueuedAudioSize(audioDevice_) < 2 * musicLength_)
     {
         if (SDL_QueueAudio(audioDevice_, musicBuffer_, musicLength_) != 0)
         {
@@ -798,7 +800,9 @@ void Game::Update()
         SpawnPlayer();
     }
 
+    float aimDeadzone = 0.2f;
     ImGui::Begin("Settings");
+        ImGui::SliderFloat("Aim deadzone", &aimDeadzone, 0.0f, 1.0f);
         ImGui::SliderFloat("Projectile speed", &projectileSpeed, 0.0f, 500.0f);
         ImGui::SliderFloat("Time scale", &timeScale_, 0.0f, 4.0f);
     ImGui::End();
@@ -823,7 +827,9 @@ void Game::Update()
             coyoteTimeRemaining_[playerI] -= GetDTime();
 
         float characterSpeed{ 80 };
-        if ((g_Input->IsKeyDown(KC_SPACE) || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)))
+        if (g_Input->IsKeyDown(KC_SPACE) 
+            || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)
+            || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))
         {
             if (isGrounded_[playerI] || coyoteTimeRemaining_[playerI] > 0)
             {
@@ -934,7 +940,7 @@ void Game::Update()
             Vec2 dir;
             dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
             dir.y = -g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_Y);
-            if (dir.Length() > 0.5f)
+            if (dir.Length() > aimDeadzone)
             {
                 Vec2 dirNormalized = dir.Normalized();
                 constexpr float AIM_STEP = HS_TAU / (36.0f * 2);

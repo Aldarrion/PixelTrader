@@ -101,6 +101,7 @@ private:
     bool        hasDoubleJumped_[MAX_PLAYERS]{};
 
     // Audio
+    bool        muteAudio_{ true };
     SDL_AudioDeviceID audioDevice_;
     uint    musicLength_{};
     uint8*  musicBuffer_{};
