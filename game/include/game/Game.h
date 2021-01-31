@@ -12,6 +12,7 @@
 #include "Common/Enums.h"
 #include "Common/Types.h"
 
+#include "sdl/SDL_audio.h"
 
 namespace hs
 {
@@ -45,9 +46,10 @@ class Game : public GameBase
 public:
     ~Game();
 
-    RESULT Init();
-    RESULT OnWindowResized();
-    void Update();
+    RESULT Init() override;
+    void Free() override;
+    RESULT OnWindowResized() override;
+    void Update() override;
 
 private:
     enum GroundTile
@@ -97,6 +99,11 @@ private:
     int         playerScore_[MAX_PLAYERS]{};
     bool        isGrounded_[MAX_PLAYERS]{};
     bool        hasDoubleJumped_[MAX_PLAYERS]{};
+
+    // Audio
+    SDL_AudioDeviceID audioDevice_;
+    uint    musicLength_{};
+    uint8*  musicBuffer_{};
 
     // Debug
     bool visualizeColliders_{};

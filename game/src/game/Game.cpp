@@ -558,6 +558,26 @@ RESULT Game::Init()
 {
     //srand(42);
 
+    // TODO(pavel): Abstract this to the engine, only play sounds from game
+    SDL_AudioSpec musicSpec;
+    if (!SDL_LoadWAV("sounds/music.wav", &musicSpec, &musicBuffer_, &musicLength_))
+    {
+        LOG_ERR("Failed to load music");
+        return R_FAIL;
+    }
+
+    SDL_AudioSpec want{};
+    SDL_AudioSpec have{};
+
+    want.freq = musicSpec.freq;
+    want.format = musicSpec.format;
+    want.channels = musicSpec.channels;
+    want.samples = musicSpec.samples;
+    want.callback = nullptr;
+
+    audioDevice_ = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+    SDL_PauseAudioDevice(audioDevice_, 0);
+
     InitEcs();
     InitCamera();
 
@@ -620,6 +640,12 @@ RESULT Game::Init()
     cam.UpdateMatrices();
 
     return R_OK;
+}
+
+//------------------------------------------------------------------------------
+void Game::Free()
+{
+    SDL_FreeWAV(musicBuffer_);
 }
 
 //------------------------------------------------------------------------------
@@ -723,6 +749,16 @@ static Vec2 DirectionFromRotation(float rotation)
 //------------------------------------------------------------------------------
 void Game::Update()
 {
+    // Audio
+    if (uint queuedAudioSize = SDL_GetQueuedAudioSize(audioDevice_) < 2 * musicLength_)
+    {
+        if (SDL_QueueAudio(audioDevice_, musicBuffer_, musicLength_) != 0)
+        {
+            LOG_ERR("Failed to queue audio %s", SDL_GetError());
+            SDL_ClearError();
+        }
+    }
+
     // Debug
     if (g_Input->IsKeyDown(KC_C))
     {
