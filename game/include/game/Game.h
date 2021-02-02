@@ -74,13 +74,17 @@ private:
 
     static constexpr float  LAYER_TARGET{ 2.5f };
     static constexpr float  LAYER_WEAPON{ 0.4f };
+    static constexpr float  LAYER_CLUTTER{ 2 };
 
     UniquePtr<EcsWorld> world_;
 
     Sprite groundSprite_[3 * 3]{};
-    Sprite goldChestSprite_{};
     Sprite rockSprite_[2]{};
     Sprite pumpkinSprite_[2]{};
+    Sprite amanitaSprite_{};
+    Sprite crystalSprite_{};
+    Sprite sunflowerSprite_{};
+    Sprite flowerSmallSprite_{};
     Sprite forestSprite_{};
     Sprite forestDoorSprite_{};
     Sprite arrowSprite_{};

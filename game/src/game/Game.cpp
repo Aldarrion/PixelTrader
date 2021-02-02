@@ -268,7 +268,7 @@ PlayerInfo Game::RespawnPlayer(int playerId)
 
     Vec2 weaponPosOffset(rockIdle.GetCurrentSprite()->size_ / 2.0f);
     playerInfo.weaponEntity_ = world_->CreateEntity(
-        Position{ Vec3(spawnPos.x + weaponPosOffset.x, spawnPos.x + weaponPosOffset.y, LAYER_WEAPON) }, 
+        Position{ Vec3(spawnPos.x + weaponPosOffset.x, spawnPos.x + weaponPosOffset.y, LAYER_WEAPON) },
         Rotation { 0.0f },
         SpriteComponent{ &bowSprite_ }
     );
@@ -457,22 +457,49 @@ RESULT Game::LoadMap()
         return R_FAIL;
     Box2D pumpkinCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(12, 10));
 
-    auto MakePumpkin = [this, &pumpkinCollider, &pumpkinIdle](float x, float y)
+    auto MakePumpkin = [this, &pumpkinCollider, &pumpkinIdle](float x, float y, int offsetX, int offsetY)
     {
-        AddObject(Vec3(x * TILE_SIZE, y * TILE_SIZE + 9, 1), pumpkinIdle, &pumpkinCollider);
+        AddObject(Vec3(x * TILE_SIZE + offsetX, y * TILE_SIZE + 9 + offsetY, 1), pumpkinIdle, &pumpkinCollider);
     };
-    MakePumpkin(11, 1);
-    MakePumpkin(9, 2.5f);
 
-    Array<AnimationSegment> chestIdleSegments;
-    chestIdleSegments.Add(AnimationSegment{ &goldChestSprite_, 1.0f });
+    auto MakeAmanita = [this](float x, float y, int height)
+    {
+        AddSprite(Vec3(x * TILE_SIZE, y * TILE_SIZE + 5 + height, LAYER_CLUTTER), &amanitaSprite_);
+    };
 
-    AnimationState chestIdle{};
-    if (HS_FAILED(chestIdle.Init(chestIdleSegments)))
+    auto MakeFlowerSmall = [this](float  tileX, float tileY, int offsetX, int height)
+    {
+        AddSprite(Vec3(tileX * TILE_SIZE + offsetX, tileY * TILE_SIZE + 6 + height, LAYER_CLUTTER), &flowerSmallSprite_);
+    };
+
+    auto MakeFlowerSmallCluster = [this, MakeFlowerSmall](float tileX, float tileY, int offsetX)
+    {
+        MakeFlowerSmall(tileX, tileY, offsetX + 0, 3);
+        MakeFlowerSmall(tileX, tileY, offsetX + -4, 2);
+        MakeFlowerSmall(tileX, tileY, offsetX + 4, 1);
+    };
+
+    auto MakeSunflower = [this](float tileX, float tileY, int offsetX, int offsetY)
+    {
+        AddSprite(Vec3(tileX * TILE_SIZE + offsetX, tileY * TILE_SIZE + 9 + offsetY, LAYER_CLUTTER), &sunflowerSprite_);
+    };
+
+    Array<AnimationSegment> crystalIdleSegments;
+    crystalIdleSegments.Add(AnimationSegment{ &crystalSprite_, 0.5f });
+
+    AnimationState crystalIdle{};
+    if (HS_FAILED(crystalIdle.Init(crystalIdleSegments)))
         return R_FAIL;
+    Box2D mainCrystalCollider = MakeBox2DPosSize(Vec2(2, 0), Vec2(26, 10));
 
-    Box2D chestCollider = MakeBox2DMinMax(Vec2(3, 1), Vec2(29, 25));
-    AddObject(TilePos(8, 1.5f, 1), chestIdle, &chestCollider);
+    auto MakeCrystal = [this, &crystalIdle, &mainCrystalCollider](float tileX, float tileY, int offsetX, int yOffset, float zOffset)
+    {
+        const Vec3 pos(tileX * TILE_SIZE + offsetX, tileY * TILE_SIZE + yOffset, 1 + zOffset);
+        AddObject(pos, crystalIdle, &mainCrystalCollider);
+
+        Box2D centerCrystalCollider = MakeBox2DPosSize(Vec2(10, 0), Vec2(7, 18));
+        world_->CreateEntity(ColliderComponent{ centerCrystalCollider }, Position{ pos });
+    };
 
     // Main arena
     {
@@ -513,7 +540,7 @@ RESULT Game::LoadMap()
         int height = 1;
 
         Box2D groundCollider = MakeBox2DMinMax(
-            Vec2((left + 0.25f) * TILE_SIZE, bot * TILE_SIZE), 
+            Vec2((left + 0.25f) * TILE_SIZE, bot * TILE_SIZE),
             Vec2((left + 0.75f + width) * TILE_SIZE, (bot + height - 0.5f) * TILE_SIZE)
         );
         world_->CreateEntity(ColliderComponent{ groundCollider }, Position{ Vec3::ZERO() }, ColliderTag::Ground);
@@ -530,7 +557,33 @@ RESULT Game::LoadMap()
     MakePlatform(20, 10, 2);
     MakePlatform(20, 4.5, 1);
 
-    MakePumpkin(14 + 4, 5 + 1);
+    MakeFlowerSmallCluster(7, 7.5f, 0);
+
+    MakeFlowerSmallCluster(15, 6, 0);
+    MakePumpkin(18, 6, -6, 0);
+
+    MakeAmanita(1, 1, 4);
+    MakeAmanita(1.875f, 1, 3);
+    MakeAmanita(4, 1, 4);
+
+    MakeFlowerSmall(1, 1, -6, 3);
+    MakeFlowerSmall(5, 1, 0, 3);
+
+    MakeFlowerSmallCluster(3, 1, 0);
+    MakeFlowerSmallCluster(2, 4, 0);
+
+    MakeCrystal(8, 1.5f, 0, -3, 0);
+    MakeCrystal(10, 1.5f, 0, 0, -0.1f);
+    MakeCrystal(11, 1.5f, 2, -2, 0.0f);
+    MakeCrystal(11, 2.0f, 0, -1, 0.1f);
+
+    MakeSunflower(19, 1, 3, -8);
+    MakeSunflower(20, 1, 0, 0);
+    MakeSunflower(21, 1, -2, -5);
+
+    MakeSunflower(22, 10, 0, -5);
+
+    MakePumpkin(22, 1, 6, 0);
 
     // Targets
     world_->CreateEntity(TargetRespawnTimer{ TilePos(21, 12, LAYER_TARGET), TARGET_COOLDOWN });
@@ -602,9 +655,6 @@ RESULT Game::Init()
         }
     }
 
-    if (HS_FAILED(MakeSimpleSprite("textures/GoldChest.png", goldChestSprite_, Vec2::ZERO())))
-        return R_FAIL;
-
     if (HS_FAILED(MakeSimpleSprite("textures/Forest.png", forestSprite_, Vec2::ZERO())))
         return R_FAIL;
 
@@ -621,6 +671,18 @@ RESULT Game::Init()
         return R_FAIL;
 
     if (HS_FAILED(MakeSimpleSprite("textures/Pumpkin2.png", pumpkinSprite_[1], Vec2::ZERO())))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleSprite("textures/AmanitaMuscaria.png", amanitaSprite_, Vec2::ZERO())))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleSprite("textures/Crystal.png", crystalSprite_, Vec2::ZERO())))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleSprite("textures/Sunflower.png", sunflowerSprite_, Vec2::ZERO())))
+        return R_FAIL;
+
+    if (HS_FAILED(MakeSimpleSprite("textures/FlowerSmall.png", flowerSmallSprite_, Vec2::ZERO())))
         return R_FAIL;
 
     if (HS_FAILED(MakeSimpleSprite("textures/Arrow.png", arrowSprite_, Vec2(0.5f, 0.5f))))
@@ -827,7 +889,7 @@ void Game::Update()
             coyoteTimeRemaining_[playerI] -= GetDTime();
 
         float characterSpeed{ 80 };
-        if (g_Input->IsKeyDown(KC_SPACE) 
+        if (g_Input->IsKeyDown(KC_SPACE)
             || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)
             || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))
         {
@@ -997,7 +1059,7 @@ void Game::Update()
                     Vec3(projPos.x, projPos.y, 0.5f),
                     angle,
                     &arrowSprite_,
-                    Circle(Vec2(7, 2.5f), 2.5f),
+                    Circle(Vec2(7, 2.5f), 1.5f),
                     projectileVelocity,
                     playerI
                 );
