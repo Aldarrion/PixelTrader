@@ -1245,7 +1245,8 @@ void Game::Update()
 
     DrawColliders();
 
-    g_Render->GetGuiRenderer()->AddText(font_.Get(), StringView("HELLO"), Vec2(100, 100));
+    // TODO(pavel): 0,0 for UI top left or bottom left?
+    g_Render->GetGuiRenderer()->AddText(font_.Get(), StringView("HELLO"), Vec2(100, 200));
 }
 
 }
