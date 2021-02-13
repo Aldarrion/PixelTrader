@@ -3,6 +3,9 @@
 #include "Game/SpriteRenderer.h"
 #include "Game/DebugShapeRenderer.h"
 
+#include "Gui/Font.h"
+#include "Gui/GuiRenderer.h"
+
 #include "Render/Texture.h"
 #include "Render/VertexBuffer.h"
 #include "Render/ShaderManager.h"
@@ -612,6 +615,11 @@ void Game::InitCamera()
 RESULT Game::Init()
 {
     //srand(42);
+
+    //
+    font_ = MakeUnique<Font>();
+    if (HS_FAILED(font_->Init("PixelFont")))
+        return R_FAIL;
 
     // TODO(pavel): Abstract this to the engine, only play sounds from game
     SDL_AudioSpec musicSpec;
@@ -1236,6 +1244,8 @@ void Game::Update()
     );
 
     DrawColliders();
+
+    g_Render->GetGuiRenderer()->AddText(font_.Get(), StringView("HELLO"), Vec2(100, 100));
 }
 
 }

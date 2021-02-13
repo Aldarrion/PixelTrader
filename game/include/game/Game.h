@@ -19,6 +19,7 @@ namespace hs
 
 //------------------------------------------------------------------------------
 class Texture;
+class Font;
 
 //------------------------------------------------------------------------------
 extern class Game* g_Game;
@@ -77,6 +78,8 @@ private:
     static constexpr float  LAYER_CLUTTER{ 2 };
 
     UniquePtr<EcsWorld> world_;
+
+    UniquePtr<Font>     font_;
 
     Sprite groundSprite_[3 * 3]{};
     Sprite rockSprite_[2]{};
