@@ -884,7 +884,7 @@ void Game::Update()
         if (players_[playerI].playerEntity_ == NULL_ENTITY)
             continue;
 
-        if (g_Input->GetState(KC_LSHIFT) || g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5)
+        if (g_Input->GetState(KC_LSHIFT) || (gamepadForPlayer_[playerI] != -1 && g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_TRIGGER) > -0.5))
             focusMultiplier[playerI] = 0.25f;
         else
             focusMultiplier[playerI] = 1.0;
@@ -898,8 +898,8 @@ void Game::Update()
 
         float characterSpeed{ 80 };
         if (g_Input->IsKeyDown(KC_SPACE)
-            || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A)
-            || g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))
+            || (gamepadForPlayer_[playerI] != -1 && g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_A))
+            || (gamepadForPlayer_[playerI] != -1 && g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_LEFT_BUMPER)))
         {
             if (isGrounded_[playerI] || coyoteTimeRemaining_[playerI] > 0)
             {
@@ -922,7 +922,7 @@ void Game::Update()
             velocity.x -= characterSpeed;
         }
 
-        const float xAxis = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_X);
+        const float xAxis = gamepadForPlayer_[playerI] == -1 ? 0 :g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_LEFT_X);
         if (xAxis)
         {
             velocity.x += characterSpeed * xAxis;
@@ -1008,8 +1008,8 @@ void Game::Update()
             weaponPos.y = pos.y + playerSprite->size_.y / 2.0f;
 
             Vec2 dir;
-            dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
-            dir.y = -g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_Y);
+            dir.x = gamepadForPlayer_[playerI] == -1 ? 0 : g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);
+            dir.y = gamepadForPlayer_[playerI] == -1 ? 0 : -g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_Y);
             if (dir.Length() > aimDeadzone)
             {
                 Vec2 dirNormalized = dir.Normalized();
@@ -1040,7 +1040,7 @@ void Game::Update()
                 Vec2 to = CursorToWorld();
                 dir = (to - projPos);
             }
-            else if (g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER))
+            else if (gamepadForPlayer_[playerI] != -1 && g_Input->IsButtonDown(gamepadForPlayer_[playerI], GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER))
             {
                 shouldShoot = true;
                 /*dir.x = g_Input->GetAxis(gamepadForPlayer_[playerI], GLFW_GAMEPAD_AXIS_RIGHT_X);

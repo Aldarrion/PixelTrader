@@ -100,7 +100,7 @@ private:
     int         playerCount_{ 0 };
     PlayerInfo  players_[MAX_PLAYERS]{};
 
-    int         gamepadForPlayer_[MAX_PLAYERS]{};
+    int         gamepadForPlayer_[MAX_PLAYERS]{ -1, -1 };
     float       timeToShoot_[MAX_PLAYERS]{};
     float       coyoteTimeRemaining_[MAX_PLAYERS]{};
     int         playerScore_[MAX_PLAYERS]{};
