@@ -7,7 +7,6 @@
 #include "Gui/GuiRenderer.h"
 
 #include "Render/Texture.h"
-#include "Render/VertexBuffer.h"
 #include "Render/ShaderManager.h"
 #include "Render/Render.h"
 #include "Render/hs_Image.h"
