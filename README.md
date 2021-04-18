@@ -1,6 +1,6 @@
 # Pixel Trader
 
-Pixel trader is a prototype of a local multiplayer game where two players shoot each other with bows in a small arena (similar to TowerFall Ascension). It is built mostly from scratch on top of a custom engine which serves as my experimentation playground. The game itself uses simple archetype Entity Component System implementation inspied by FLECS.
+Pixel trader is a prototype of a local multiplayer game where two players shoot each other with bows in a small arena (similar to TowerFall Ascension). It is built mostly from scratch on top of a custom engine which serves as my experimentation playground. The game itself uses simple archetype Entity Component System implementation inspied by [FLECS](https://github.com/SanderMertens/flecs).
 
 The most interesting part of the engine is probably the renderer written in Vulkan. There are also custom containers, math library, and anything else I find interesting to try to implement myself. I try to use as few libraries as possible here while still gettings things done.
 
