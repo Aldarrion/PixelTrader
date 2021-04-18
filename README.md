@@ -6,6 +6,7 @@ The most interesting part of the engine is probably the renderer written in Vulk
 
 # Getting started
 
+1. Clone with submodules by `git clone --recurse-submodules`
 1. Install [Vulakn SDK](https://vulkan.lunarg.com/) version `1.2.162.1`
 1. Add `dxc` to your PATH (or modify the shader compile script)
 1. Compile shaders by running `Engine/BuildShaders.bat` (bash script comming soon)
