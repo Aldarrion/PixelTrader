@@ -12,12 +12,12 @@
 namespace hs
 {
 
-using Entity_t = uint;
+using Entity_t = int;
 
 template<class T>
 struct TypeInfo;
 
-static constexpr uint ID_BAD{ (uint)-1 };
+static constexpr int ID_BAD{ -1 };
 static constexpr Entity_t NULL_ENTITY{ 0 };
 
 namespace internal
@@ -26,7 +26,7 @@ namespace internal
 template<class TWithoutCvRef>
 struct TypeInfoHelper
 {
-    inline static uint typeId_{ ID_BAD };
+    inline static int typeId_{ ID_BAD };
 };
 }
 
@@ -42,8 +42,8 @@ struct TypeDetails
     TypeDtor_t dtor_;
     TypeCopyCtor_t copyCtor_;
     TypeMoveCtor_t moveCtor_;
-    uint alignment_;
-    uint size_;
+    int alignment_;
+    int size_;
     bool isTrivial_;
 };
 
@@ -54,13 +54,13 @@ struct TypeInfoDb
     friend struct TypeInfo;
 
     //------------------------------------------------------------------------------
-    static const TypeDetails* GetDetails(uint type)
+    static const TypeDetails* GetDetails(int type)
     {
         return details_[type];
     }
 
 private:
-    inline static uint lastTypeId_{ 0 };
+    inline static int lastTypeId_{ 0 };
     inline static Array<const TypeDetails*> details_;
 };
 
@@ -99,10 +99,10 @@ struct TypeInfo
     static_assert(std::is_standard_layout_v<T>);
 
     //------------------------------------------------------------------------------
-    static uint TypeId()
+    static int TypeId()
     {
         const auto id = internal::TypeInfoHelper<RemoveCvRef_t<T>>::typeId_;
-        hs_assert(id != ID_BAD && "Type is not registered by TypeInfo<T>::InitTypeId()");
+        HS_ASSERT(id != ID_BAD && "Type is not registered by TypeInfo<T>::InitTypeId()");
         return id;
     }
 
@@ -119,7 +119,7 @@ struct TypeInfo
         details_.moveCtor_ = TypeMoveCtor<T>;
         TypeInfoDb::details_.Add(&details_);
 
-        hs_assert(TypeInfoDb::details_.Count() == TypeInfoDb::lastTypeId_);
+        HS_ASSERT(TypeInfoDb::details_.Count() == TypeInfoDb::lastTypeId_);
     }
 
     inline static TypeDetails details_;
@@ -131,7 +131,7 @@ class EcsWorld;
 class Archetype // Table?
 {
 public:
-    using Type_t = Array<uint>;
+    using Type_t = Array<int>;
     using Column_t = void*;
 
     //------------------------------------------------------------------------------
@@ -148,9 +148,9 @@ public:
             Column_t column = malloc(rowCapacity_ * details->size_);
             if (!details->isTrivial_)
             {
-                for (uint rowI = 0; rowI < rowCapacity_; ++rowI)
+                for (int rowI = 0; rowI < rowCapacity_; ++rowI)
                 {
-                    details->ctor_((byte*)column + rowI * details->size_);
+                    details->ctor_((int8*)column + rowI * details->size_);
                 }
             }
             columns_.Add(column);
@@ -165,9 +165,9 @@ public:
             const TypeDetails* details = TypeInfoDb::GetDetails(type_[i]);
             if (!details->isTrivial_)
             {
-                for (uint rowI = 0; rowI < rowCapacity_; ++rowI)
+                for (int rowI = 0; rowI < rowCapacity_; ++rowI)
                 {
-                    details->dtor_((byte*)columns_[i] + rowI * details->size_);
+                    details->dtor_((int8*)columns_[i] + rowI * details->size_);
                 }
             }
             free(columns_[i]);
@@ -194,7 +194,7 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    uint FindComponent(uint componentTypeId) const
+    int FindComponent(int componentTypeId) const
     {
         for (int i = 0; i < type_.Count(); ++i)
         {
@@ -207,7 +207,7 @@ public:
 
     //------------------------------------------------------------------------------
     template<class TComponent>
-    uint FindComponent() const
+    int FindComponent() const
     {
         auto componentTypeId = TypeInfo<TComponent>::TypeId();
         return FindComponent(componentTypeId);
@@ -237,17 +237,17 @@ public:
 
     //------------------------------------------------------------------------------
     template<class TComponent>
-    TComponent& GetComponent(uint row, uint column)
+    TComponent& GetComponent(int row, int column)
     {
         auto size = TypeInfo<TComponent>::details_.size_;
-        auto& result = *reinterpret_cast<TComponent*>((byte*)columns_[column] + row * size);
+        auto& result = *reinterpret_cast<TComponent*>((int8*)columns_[column] + row * size);
         return result;
     }
 
     //------------------------------------------------------------------------------
-    void SetComponent(uint rowIdx, uint componentTypeId, void* value)
+    void SetComponent(int rowIdx, int componentTypeId, void* value)
     {
-        hs_assert(componentTypeId != ID_BAD);
+        HS_ASSERT(componentTypeId != ID_BAD);
 
         const auto details = TypeInfoDb::GetDetails(componentTypeId);
         auto size = details->size_;
@@ -256,7 +256,7 @@ public:
 
         Column_t column = columns_[componentIdx];
 
-        void* dst = (byte*)column + rowIdx * size;
+        void* dst = (int8*)column + rowIdx * size;
         if (details->isTrivial_)
         {
             memcpy(dst, value, size);
@@ -269,7 +269,7 @@ public:
 
     //------------------------------------------------------------------------------
     template<class TComponent, class... TRest>
-    void SetComponents(uint rowIdx, const TComponent& value, const TRest... rest)
+    void SetComponents(int rowIdx, const TComponent& value, const TRest... rest)
     {
         SetComponent(rowIdx, value);
         SetComponents(rowIdx, rest...);
@@ -277,13 +277,13 @@ public:
 
     //------------------------------------------------------------------------------
     template<class TComponent>
-    void SetComponents(uint rowIdx, const TComponent& value)
+    void SetComponents(int rowIdx, const TComponent& value)
     {
         SetComponent(rowIdx, value);
     }
 
     //------------------------------------------------------------------------------
-    uint AddEntity(Entity_t eid)
+    int AddEntity(Entity_t eid)
     {
         EnsureCapacity();
 
@@ -308,10 +308,10 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    void RemoveRow(uint row);
+    void RemoveRow(int row);
 
     //------------------------------------------------------------------------------
-    int TryGetIterators(const Type_t& canonicalType, Span<const uint> permutation, void** arr, Span<const uint> avoidTypes) const
+    int TryGetIterators(const Type_t& canonicalType, Span<const int> permutation, void** arr, Span<const int> avoidTypes) const
     {
         if (canonicalType.Count() > type_.Count())
             return 0;
@@ -346,11 +346,11 @@ public:
     };
 
     //------------------------------------------------------------------------------
-    Element GetElement(uint row, uint column)
+    Element GetElement(int row, int column)
     {
         const TypeDetails* details = TypeInfoDb::GetDetails(type_[column]);
         Element element;
-        element.data_ = (byte*)columns_[column] + row * details->size_;
+        element.data_ = (int8*)columns_[column] + row * details->size_;
         element.details_ = details;
         return element;
     }
@@ -359,11 +359,11 @@ private:
     EcsWorld* world_;
     Type_t type_;
     Array<Column_t> columns_;
-    uint rowCount_{};
-    uint rowCapacity_;
+    int rowCount_{};
+    int rowCapacity_;
 
     //------------------------------------------------------------------------------
-    uint GetEntityId(uint row)
+    int GetEntityId(int row)
     {
         auto element = GetElement(row, 0);
         return *(Entity_t*)element.data_;
@@ -375,7 +375,7 @@ private:
         if (rowCount_ < rowCapacity_)
             return;
 
-        hs_assert(rowCount_ == rowCapacity_);
+        HS_ASSERT(rowCount_ == rowCapacity_);
 
         rowCapacity_ *= 2;
         for (int i = 0; i < columns_.Count(); ++i)
@@ -391,31 +391,31 @@ private:
             {
                 newColumn = malloc(rowCapacity_ * details->size_);
 
-                for (uint rowI = 0; rowI < rowCapacity_; ++rowI)
+                for (int rowI = 0; rowI < rowCapacity_; ++rowI)
                 {
-                    void* dst = (byte*)newColumn + rowI * details->size_;
-                    void* src = (byte*)columns_[i] + rowI * details->size_;
+                    void* dst = (int8*)newColumn + rowI * details->size_;
+                    void* src = (int8*)columns_[i] + rowI * details->size_;
                     details->moveCtor_(dst, src);
                     details->dtor_(src);
                 }
                 free(columns_[i]);
             }
-            hs_assert(newColumn);
+            HS_ASSERT(newColumn);
             columns_[i] = newColumn;
         }
     }
 
     //------------------------------------------------------------------------------
-    void SwapRow(uint a, uint b)
+    void SwapRow(int a, int b)
     {
         for (int i = 0; i < columns_.Count(); ++i)
         {
             const TypeDetails* details = TypeInfoDb::GetDetails(type_[i]);
             auto size = details->size_;
 
-            byte* tmp = HS_ALLOCA(byte, size);
-            byte* aPtr = (byte*)columns_[i] + size * a;
-            byte* bPtr = (byte*)columns_[i] + size * b;
+            int8* tmp = HS_ALLOCA(int8, size);
+            int8* aPtr = (int8*)columns_[i] + size * a;
+            int8* bPtr = (int8*)columns_[i] + size * b;
 
             if (details->isTrivial_)
             {
@@ -435,11 +435,11 @@ private:
 
     //------------------------------------------------------------------------------
     template<class TComponent>
-    void SetComponent(uint rowIdx, const TComponent& value)
+    void SetComponent(int rowIdx, const TComponent& value)
     {
         auto componentId = FindComponent<TComponent>();
-        hs_assert(componentId != ID_BAD);
-        hs_assert(rowIdx < rowCount_);
+        HS_ASSERT(componentId != ID_BAD);
+        HS_ASSERT(rowIdx < rowCount_);
 
         Column_t column = columns_[componentId];
         static_cast<TComponent*>(column)[rowIdx] = value;
@@ -473,7 +473,7 @@ public:
         }
         else
         {
-            hs_assert(denseUsedCount_ < dense_.Count());
+            HS_ASSERT(denseUsedCount_ < dense_.Count());
             id = dense_[denseUsedCount_];
             sparse_[id] = denseUsedCount_;
         }
@@ -520,7 +520,7 @@ public:
         Archetype* arch = &archetypes_[record.archetype_];
 
         auto columnIdx = arch->FindComponent<TComponent>();
-        hs_assert(columnIdx != ID_BAD);
+        HS_ASSERT(columnIdx != ID_BAD);
 
         auto& component = arch->GetComponent<TComponent>(record.rowIndex_, columnIdx);
         return component;
@@ -545,7 +545,7 @@ public:
             auto type = originalArch->GetType();
             AddComponentsToType<TComponent...>(type);
 
-            uint archetypeIdx = ID_BAD;
+            int archetypeIdx = ID_BAD;
 
             for (int i = 0; i < archetypes_.Count(); ++i)
             {
@@ -560,10 +560,10 @@ public:
             {
                 Archetype newArchetype(this, type);
                 archetypes_.Add(std::move(newArchetype));
-                archetypeIdx = (uint)archetypes_.Count() - 1;
+                archetypeIdx = (int)archetypes_.Count() - 1;
             }
 
-            hs_assert(archetypeIdx != ID_BAD);
+            HS_ASSERT(archetypeIdx != ID_BAD);
 
             // Copy components one by one from old to the new originalArch
             Archetype* newArch = &archetypes_[archetypeIdx];
@@ -590,7 +590,7 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    void GetEntities(uint*& begin, uint& count)
+    void GetEntities(int*& begin, int& count)
     {
         begin = dense_.Data();
         count = denseUsedCount_;
@@ -617,13 +617,13 @@ public:
             static constexpr int COMP_COUNT = sizeof...(TComponents);
             auto seq = std::make_index_sequence<COMP_COUNT>();
 
-            uint avoidTypes[]{ TypeInfo<TAvoidComponents>::TypeId()... };
+            int avoidTypes[]{ TypeInfo<TAvoidComponents>::TypeId()... };
 
             Archetype::Type_t type{ TypeInfo<TComponents>::TypeId()... };
             Archetype::Type_t canonicalType = type;
             std::sort(canonicalType.begin(), canonicalType.end());
 
-            uint permutation[COMP_COUNT];
+            int permutation[COMP_COUNT];
             for (int i = 0; i < COMP_COUNT; ++i)
             {
                 permutation[i] = type.IndexOf(canonicalType[i]);
@@ -655,16 +655,16 @@ public:
             Archetype::Type_t canonicalType = type;
             std::sort(canonicalType.begin(), canonicalType.end());
 
-            uint permutation[COMP_COUNT];
+            int permutation[COMP_COUNT];
             for (int i = 0; i < COMP_COUNT; ++i)
             {
-                permutation[i] = (uint)type.IndexOf(canonicalType[i]);
+                permutation[i] = (int)type.IndexOf(canonicalType[i]);
             }
 
             for (int archI = 0; archI < world_->archetypes_.Count(); ++archI)
             {
                 void* arr[COMP_COUNT]{};
-                if (int rowCount = world_->archetypes_[archI].TryGetIterators(canonicalType, MakeSpan(permutation), arr, Span<const uint>());
+                if (int rowCount = world_->archetypes_[archI].TryGetIterators(canonicalType, MakeSpan(permutation), arr, Span<const int>());
                     rowCount)
                 {
                     for (int rowI = 0; rowI < rowCount; ++rowI)
@@ -699,7 +699,7 @@ public:
             //------------------------------------------------------------------------------
             ~IterScope()
             {
-                hs_assert(world_->IsIterating());
+                HS_ASSERT(world_->IsIterating());
                 --world_->iteratingDepth_;
 
                 if (!world_->IsIterating())
@@ -715,22 +715,22 @@ private:
     struct EntityDeleteOperation;
     struct EntityRecord
     {
-        uint archetype_;
-        uint rowIndex_;
+        int archetype_;
+        int rowIndex_;
     };
 
     Array<Entity_t>     sparse_;
-    Array<uint>         dense_;
+    Array<int>         dense_;
     Array<EntityRecord> records_;
     Array<Archetype>    archetypes_;
 
     Array<EntityDeleteOperation> deferredDeletions_;
 
-    uint                denseUsedCount_{};
-    uint                iteratingDepth_{};
+    int                 denseUsedCount_{};
+    int                 iteratingDepth_{};
 
     //------------------------------------------------------------------------------
-    void SwapEntity(uint denseIdxA, uint denseIdxB)
+    void SwapEntity(int denseIdxA, int denseIdxB)
     {
         Swap(dense_[denseIdxA], dense_[denseIdxB]);
         Swap(records_[denseIdxA], records_[denseIdxB]);
@@ -747,7 +747,7 @@ private:
         // TODO binary search? But we will change the system to bitfields anyway
         for (int i = 0; i < type.Count(); ++i)
         {
-            hs_assert(type[i] != typeId && "TypeId already present in type");
+            HS_ASSERT(type[i] != typeId && "TypeId already present in type");
             if (type[i] > typeId)
             {
                 type.Insert(i, typeId);
@@ -774,7 +774,7 @@ private:
     }
 
     //------------------------------------------------------------------------------
-    void UpdateRecord(Entity_t eid, uint rowIdx)
+    void UpdateRecord(Entity_t eid, int rowIdx)
     {
         auto denseIdx = sparse_[eid];
         records_[denseIdx].rowIndex_ = rowIdx;
@@ -810,10 +810,10 @@ private:
         //------------------------------------------------------------------------------
         void Execute()
         {
-            hs_assert(world_->denseUsedCount_ > 0);
+            HS_ASSERT(world_->denseUsedCount_ > 0);
             auto denseIdx = world_->sparse_[entity_];
             auto lastDense = world_->denseUsedCount_ - 1;
-            hs_assert(denseIdx <= world_->denseUsedCount_);
+            HS_ASSERT(denseIdx <= world_->denseUsedCount_);
 
             const auto& record = world_->records_[denseIdx];
             world_->archetypes_[record.archetype_].RemoveRow(record.rowIndex_);
@@ -825,7 +825,7 @@ private:
 
             // Remove last entity
             --world_->denseUsedCount_;
-            world_->records_.RemoveLast();
+            world_->records_.RemoveBack();
         }
 
     private:
@@ -835,11 +835,11 @@ private:
 };
 
 //------------------------------------------------------------------------------
-inline void Archetype::RemoveRow(uint row)
+inline void Archetype::RemoveRow(int row)
 {
-    hs_assert(row < rowCount_);
+    HS_ASSERT(row < rowCount_);
 
-    const uint lastRowIdx = rowCount_ - 1;
+    const int lastRowIdx = rowCount_ - 1;
     if (row < lastRowIdx)
     {
         auto eid = GetEntityId(lastRowIdx);

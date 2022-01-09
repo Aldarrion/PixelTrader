@@ -1,3 +1,4 @@
+#include "Config.h"
 #include "EngineMain.h"
 
 constexpr const char* GAME_NAME = "Pixel Trader";

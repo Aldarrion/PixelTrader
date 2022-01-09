@@ -9,7 +9,7 @@
 #include "Render/Texture.h"
 #include "Render/ShaderManager.h"
 #include "Render/Render.h"
-#include "Render/hs_Image.h"
+#include "Render/Image.h"
 
 #include "Resources/ResourceManager.h"
 
@@ -18,7 +18,7 @@
 #include "Engine.h"
 
 #include "Common/Logging.h"
-#include "Common/hs_Assert.h"
+#include "Common/Assert.h"
 
 #include "imgui/imgui.h"
 
@@ -90,7 +90,7 @@ struct AnimationState
     Sprite* GetCurrentSprite() const;
 
     Array<AnimationSegment> segments_;
-    uint currentSegment_{};
+    int currentSegment_{};
     float timeToSwap_;
 };
 
@@ -180,7 +180,7 @@ void AnimationState::Update(float dTime)
 //------------------------------------------------------------------------------
 Sprite* AnimationState::GetCurrentSprite() const
 {
-    hs_assert(currentSegment_ < segments_.Count());
+    HS_ASSERT(currentSegment_ < segments_.Count());
     return segments_[currentSegment_].sprite_;
 }
 
@@ -188,8 +188,8 @@ Sprite* AnimationState::GetCurrentSprite() const
 //------------------------------------------------------------------------------
 RESULT CreateGame()
 {
-    hs_assert(!g_GameBase);
-    hs_assert(!g_Game);
+    HS_ASSERT(!g_GameBase);
+    HS_ASSERT(!g_Game);
 
     g_Game = new Game();
     g_GameBase = g_Game;
@@ -240,7 +240,7 @@ PlayerInfo Game::RespawnPlayer(int playerId)
     AnimationState rockIdle{};
     if (HS_FAILED(rockIdle.Init(rockIdleSegments)))
     {
-        hs_assert(false);
+        HS_ASSERT(false);
         return {};
     }
 
@@ -800,7 +800,7 @@ static Vec2 CursorToWorld()
 //------------------------------------------------------------------------------
 static float RotationFromDirection(Vec2 dirNormalized)
 {
-    hs_assert(fabs(dirNormalized.Length() - 1.0f) < 0.001f && "Direction must be normalized");
+    HS_ASSERT(fabs(dirNormalized.Length() - 1.0f) < 0.001f && "Direction must be normalized");
 
     float dotX = dirNormalized.Dot(Vec2::RIGHT());
     float dotY = dirNormalized.Dot(Vec2::UP());

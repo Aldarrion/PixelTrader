@@ -127,10 +127,10 @@ private:
     [[nodiscard]] PlayerInfo RespawnPlayer(int playerId);
 
     void AddProjectile(const Vec3& pos, float rotation, Sprite* sprite, const Circle& tipCollider, Vec2 velocity, int playerId);
-    void RemoveProjectile(uint idx);
+    void RemoveProjectile(Entity_t idx);
 
     void AddTarget(const Vec3& pos, Sprite* sprite, const Circle& collider);
-    void RemoveTarget(uint idx);
+    void RemoveTarget(Entity_t idx);
 
     void AnimateSprites();
     void DrawColliders();
